@@ -1,0 +1,5 @@
+/target
+*.tmp
+saves/*.tmp
+saves/*.json
+!saves/.gitkeep
