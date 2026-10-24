@@ -223,7 +223,7 @@ d:/LEAN4Game/
 │   │   └── terminal_game.rs             # CLI game runner and verification
 │   ├── lib.rs                           # Shared library exports
 │   └── main.rs                          # CLI dispatcher and app launcher
-├── tests/                               # 30 Comprehensive Unit & Integration Tests
+├── tests/                               # 31 Comprehensive Unit & Integration Tests
 │   ├── desktop_persistence_tests.rs
 │   ├── curriculum_tests.rs
 │   ├── engine_tests.rs

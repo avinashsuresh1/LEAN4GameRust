@@ -6,31 +6,33 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Workaround for WebKitGTK 2.40+ bugs on Linux:
-    // 1. Disabling DMA-BUF renderer prevents blank/white windows on Linux (especially with NVIDIA/Wayland/Mesa).
-    // 2. Disabling sandbox prevents WebKitWebProcess crashes on Ubuntu 24.04 and systems with AppArmor / restricted namespaces.
+    // Cross-platform guarantee for Linux:
+    // WebKitGTK requires WEBKIT_DISABLE_COMPOSITING_MODE=1, WEBKIT_DISABLE_DMABUF_RENDERER=1,
+    // and WEBKIT_FORCE_SANDBOX=0 to be set in the process environment BEFORE the dynamic linker
+    // and GTK/WebKit libraries load. If not already configured, we transparently re-exec the process
+    // with these environment variables so a simple `cargo run` works out of the box on all Linux distros.
     #[cfg(target_os = "linux")]
     {
-        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
-            unsafe {
-                std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-            }
-        }
-        if std::env::var_os("WEBKIT_FORCE_SANDBOX").is_none() {
-            unsafe {
-                std::env::set_var("WEBKIT_FORCE_SANDBOX", "0");
+        if std::env::var_os("LEAN4GAME_LINUX_ENV_CONFIGURED").is_none() {
+            if let Ok(exe) = std::env::current_exe() {
+                let mut cmd = std::process::Command::new(exe);
+                cmd.args(std::env::args().skip(1));
+                cmd.env("LEAN4GAME_LINUX_ENV_CONFIGURED", "1");
+                cmd.env("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+                cmd.env("WEBKIT_FORCE_SANDBOX", "0");
+                cmd.env("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+                cmd.env("LIBGL_ALWAYS_SOFTWARE", "1");
+
+                #[cfg(unix)]
+                {
+                    use std::os::unix::process::CommandExt;
+                    let _ = cmd.exec();
+                }
             }
         }
     }
 
     let args: Vec<String> = env::args().collect();
-
-    if args.contains(&"--software-render".to_string()) || args.contains(&"--no-gpu".to_string()) {
-        unsafe {
-            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
-            std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
-        }
-    }
 
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
         println!("=======================================================");
