@@ -1,76 +1,81 @@
-# LEAN 4 Game - Desktop Edition (with Local Filesystem Persistence)
+# LEAN 4 Game - Desktop Edition (with Save-to-Disk)
 
-A native desktop application and persistence bridge for the **Lean 4 Game platform**, allowing you to play the exact official Lean 4 games (**Natural Number Game**, **Real Analysis Game**, **Set Theory**, and more) on your desktop with all progress, level states, code drafts, and proofs automatically and permanently saved to your local disk.
+[![CI Tests](https://github.com/avinashsuresh1/LEAN4GameRust/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/avinashsuresh1/LEAN4GameRust)
+[![Tests Passing](https://img.shields.io/badge/tests-30%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
+[![Original Game](https://img.shields.io/badge/original%20game-adam.math.hhu.de-blue.svg)](https://adam.math.hhu.de/)
 
-It also includes a **100% offline pure Rust interactive theorem prover** as a secondary standalone engine.
-
----
-
-## 🎯 Why This Exists
-
-The official Lean 4 Game is hosted online at [`adam.math.hhu.de`](https://adam.math.hhu.de/). While excellent for learning mathematics and formal theorem proving, the browser version stores all user progress in browser `localStorage`. Whenever cookies are cleared, site data resets, or the browser caches are cleaned, **all game progress and handwritten proofs are permanently lost**.
-
-This application solves that problem by packaging the game as a native desktop application with a **Rust bidirectional filesystem bridge** that persists every proof draft and level completion to `./saves/` on your hard drive.
+> ### 📢 An Honest Note About What This Project Is
+>
+> This project is **not** an attempt to rewrite the real Lean 4 compiler or replace the official platform. 
+> 
+> It is an **exact desktop wrapper** for the official [Lean 4 Game platform (`leanprover-community/lean4game`)](https://github.com/leanprover-community/lean4game) hosted at [adam.math.hhu.de](https://adam.math.hhu.de/). It renders the **exact original game client, Monaco code editor, Infoview, and official Lean 4 / Mathlib backend**, but adds **native desktop support with automatic save-to-disk on your local filesystem**.
 
 ---
 
-## 🌟 Key Features
+## 🔗 Official Game Server & Original Repositories
 
-### 1. 🖥️ Official Lean 4 Game Native Desktop App (Primary Mode)
-- **Exact Official Experience**: Powered by native desktop windowing (`tao`) and Edge WebView2 (`wry`). You get the full official Monaco editor, Mathlib compiler connection, interactive infoview, and all published games.
-- **Automatic Filesystem Saves**: A custom Rust initialization script hooks into browser storage APIs before page execution:
-  - **Cold Hydration**: Reads `./saves/official_lean4game_save.json` on startup and populates browser storage seamlessly.
-  - **Atomic Disk Synchronization**: Intercepts `setItem`, `removeItem`, and `clear`, flushing updates via native IPC to Rust.
-  - **Crash Prevention**: Uses atomic `.tmp` write and rename semantics so saves are never corrupted.
-  - **Heartbeat & Hotkeys**: Periodic 2.5-second heartbeat sync plus `Ctrl+S` manual save trigger.
-- **One-Click Game Launchers**:
-  - `cargo run`: Launches the main Lean 4 Game hub with all games available.
-  - `cargo run -- --game nng`: Opens the Natural Number Game directly.
-  - `cargo run -- --game real-analysis`: Opens Real Analysis directly.
-  - `cargo run -- --game set-theory`: Opens Set Theory directly.
-  - `cargo run -- --game <url_or_repo>`: Opens any official community game.
-- **Export & Import**: Backup your save file or transfer it between computers using `--export-web` and `--import-web`.
+All original mathematics, game design, and compiler infrastructure belong to the amazing Lean community. Please star and support their original repositories:
+
+- **Original Game Platform & Server:** [`leanprover-community/lean4game`](https://github.com/leanprover-community/lean4game)  
+  *Developed by Alexander Bentkamp, Jon Eugster, Patrick Massot, and contributors at Heinrich Heine University Düsseldorf.*
+- **Official Web Server:** [https://adam.math.hhu.de/](https://adam.math.hhu.de/)
+- **Natural Number Game (NNG4):** [`leanprover-community/nng4`](https://github.com/leanprover-community/nng4)  
+  *By Kevin Buzzard and Mohammad Pedramfar.*
+- **Real Analysis Game:** [`tomyun/lean-game-real-analysis`](https://github.com/tomyun/lean-game-real-analysis)  
+  *By Prof. Alex Kontorovich (Rutgers University) and Tom Yun.*
+- **Formalising Mathematics / Set Theory:** [`ImperialCollegeLondon/formalising-mathematics-2024`](https://github.com/ImperialCollegeLondon/formalising-mathematics-2024)  
+  *By Kevin Buzzard at Imperial College London.*
 
 ---
 
-### 2. ⚡ Standalone Pure Rust Offline Engine (Fallback Mode)
-- **100% Offline**: Requires zero network connection, zero Lean 4 binaries, and zero Mathlib installation.
-- **46 Built-In Levels Across 12 Worlds**:
-  - **Natural Number Game (30 levels)**: Tutorial, Addition, Multiplication, Power, Implication, and Inequality Worlds.
-  - **Real Analysis (11 levels)**: Real Foundations & Metrics, Sequences & $\varepsilon$-$N$ Limits, Continuity & $\varepsilon$-$\delta$ Limits, Intermediate Value & Order.
-  - **Set Theory & Logic (5 levels)**: Subsets & Inclusions, Intersections & Unions.
-- **Native GUI (`eframe` / `egui`)**:
-  - Infoview displaying active goals (`⊢ ...`) and hypotheses context (`h : ...`).
-  - Interactive Lean 4 code editor with real-time verification and cursor diagnostics.
-  - Tactic palette buttons (`rfl`, `rw`, `induction`, `exact`, `intro`, `apply`, `use`, `constructor`, `rcases`).
-  - Peano and Real Analysis theorem inventory for 1-click proof generation.
-- **CLI & Automated Verification**:
-  - `--test-all`: Automated test runner verifying all 46 levels end-to-end.
-  - `--cli <world> <level>`: Play levels directly in your command line.
-  - `--list-games`: Print all games, worlds, and level descriptions.
+## 💡 The Problem It Solves: Saving Your Progress to Disk
+
+When you play the Lean 4 Game on `adam.math.hhu.de` in a normal web browser:
+1. All your completed levels, stars, and handwritten proof scripts are stored solely inside browser `localStorage`.
+2. Whenever you **clear your browser cookies**, wipe site data, run system cleaners, or switch between browsers/devices, **all your hard-earned progress and mathematical proofs are completely wiped out**.
+
+### How This Desktop App Fixes It:
+This app wraps the official game inside a native window (`tao`) using Edge WebView2 (`wry`) and establishes a **bidirectional Rust persistence bridge**:
+- **Automatic Hydration on Launch:** On startup, it reads `./saves/official_lean4game_save.json` from your local hard drive and injects your proofs and solved states directly into the browser storage before the page even renders.
+- **Continuous Local Disk Sync:** Whenever you type code or complete a level, the app intercepts `localStorage.setItem` and immediately sends an IPC message to the Rust backend, which saves it atomically to disk (`./saves/official_lean4game_save.json`).
+- **Crash-Resistant Atomic Writes:** Writes to a temporary `.tmp` file first and uses atomic file renaming, ensuring your saves can never be corrupted.
+- **Periodic Heartbeat & Manual Hotkeys:** Runs an automatic 2.5-second heartbeat sync, and you can press `Ctrl+S` anytime to flush immediately.
+- **Backup & Portability:** You can export your save file or transfer it to another computer at any time.
+
+---
+
+## 🎮 Secondary Fallback: Standalone Pure Rust Offline Prover
+
+In addition to the primary desktop wrapper, this repository also includes a **secondary, 100% offline pure Rust interactive theorem prover** (`--standalone`). 
+
+If you are on an airplane, have no internet connection, or cannot reach the HHU game servers, you can still solve **46 canonical levels across 12 worlds** (Natural Numbers, Real Analysis, and Set Theory) entirely offline using a built-in pure Rust tactic engine (`rfl`, `rw`, `induction`, `exact`, `intro`, `apply`, `use`, `constructor`, `rcases`, `linarith`).
 
 ---
 
 ## 🚀 Quick Start & Usage
 
-### 1. Launch Official Desktop App (Recommended)
+### Prerequisites
+- [Rust toolchain](https://rustup.rs/) (1.75+ or newer)
+- On Windows: WebView2 Runtime (already pre-installed on Windows 10 and 11)
+
+### 1. Launch the Official Desktop App (with local saves)
 ```bash
 cargo run
 ```
-Launches the desktop window loading the official Lean 4 Game with automatic local saves to `./saves/official_lean4game_save.json`.
+Opens the native desktop window connected to the official Lean 4 Game hub with your saves automatically loading from and saving to `./saves/official_lean4game_save.json`.
 
-### 2. Launch Specific Games Directly
+### 2. Launch a Specific Game Directly
 ```bash
 # Natural Number Game (NNG4)
 cargo run -- --game nng
 
-# Real Analysis Game
+# Real Analysis: The Game
 cargo run -- --game real-analysis
 
-# Set Theory Game
+# Set Theory / Formalising Mathematics
 cargo run -- --game set-theory
 
-# Any custom community game repository
+# Any other official/community game repository
 cargo run -- --game AlexanderBentkamp/lean4game-logic
 ```
 
@@ -81,31 +86,26 @@ cargo run -- --standalone
 cargo run -- --offline
 ```
 
-### 4. Verify All Proofs in Curriculum (Automated Test)
+### 4. Backup & Restore Save Files
 ```bash
-cargo run -- --test-all
+# Export your official game save to a backup JSON file
+cargo run -- --export-web saves/my_progress_backup.json
+
+# Import a save file from a backup
+cargo run -- --import-web saves/my_progress_backup.json
 ```
 
-### 5. Export and Import Save Files
+### 5. Automated Proof Verification
 ```bash
-# Export official desktop save
-cargo run -- --export-web saves/backup_official.json
-
-# Import official desktop save
-cargo run -- --import-web saves/backup_official.json
-
-# Export pure Rust standalone profile
-cargo run -- --export Default saves/backup_profile.json
-
-# Import pure Rust standalone profile
-cargo run -- --import saves/backup_profile.json
+# Verify all 46 curriculum levels in the pure Rust prover
+cargo run -- --test-all
 ```
 
 ---
 
-## 🧪 Comprehensive Verification Suite
+## 🧪 Automated Tests
 
-The project includes 30 deterministic unit and integration tests verifying both the persistence bridge and the mathematics engine:
+The codebase includes **30 unit and integration tests** verifying URL routing, injection script generation, IPC messaging, atomic disk persistence, and mathematical tactics:
 
 ```bash
 cargo test
@@ -125,13 +125,13 @@ cargo test
 d:/LEAN4Game/
 ├── saves/                               # Local filesystem save directory
 │   ├── official_lean4game_save.json     # Official desktop game saves & proof states
-│   └── Default.json                     # Offline prover player profile
+│   └── .gitkeep                         # Preserves directory in git
 ├── src/
-│   ├── desktop/                         # Official Desktop App & Bridge
-│   │   ├── bridge.rs                    # IPC handler, injection script, atomic persistence
+│   ├── desktop/                         # Official Desktop App & Save-to-Disk Bridge
+│   │   ├── bridge.rs                    # IPC handler, injection script, atomic disk persistence
 │   │   ├── webview_app.rs               # Tao window + Wry WebView2 integration
 │   │   └── mod.rs
-│   ├── engine/                          # Offline Pure Rust Theorem Prover
+│   ├── engine/                          # Offline Pure Rust Theorem Prover (Fallback)
 │   │   ├── expr.rs                      # Mathematical AST (N, R, quantifiers, metrics)
 │   │   ├── parser.rs                    # Lean 4 expression & tactic parser
 │   │   ├── tactics.rs                   # Tactics (rfl, rw, induction, apply, use, rcases...)
@@ -158,5 +158,12 @@ d:/LEAN4Game/
 │   ├── engine_tests.rs
 │   ├── tactics_tests.rs
 │   └── persistence_tests.rs
-└── Cargo.toml                           # Dependencies: tao, wry, eframe, serde, etc.
+└── Cargo.toml                           # tao, wry, eframe, serde, etc.
 ```
+
+---
+
+## 📜 Credits & License
+
+- Original Lean 4 Game platform is licensed under Apache 2.0 / MIT by the [Lean Community](https://github.com/leanprover-community).
+- See [`LICENSE`](file:///d:/LEAN4Game/LICENSE) for license details.
