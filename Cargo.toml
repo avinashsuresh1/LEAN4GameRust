@@ -3,6 +3,7 @@ name = "lean4game"
 version = "0.1.0"
 edition = "2024"
 authors = ["LEAN4 Game Team"]
+license = "GPL-3.0-only"
 description = "Desktop port of the LEAN4 Game with local filesystem persistence and interactive theorem proving"
 
 [lib]

@@ -178,4 +178,4 @@ d:/LEAN4Game/
 - **Lean 4 Game Platform (`leanprover-community/lean4game`):** Licensed under **GPL-3.0** by the Lean Community / HHU.
 - **Natural Number Game (`leanprover-community/nng4`):** Licensed under **Apache-2.0** by Kevin Buzzard & Mohammad Pedramfar.
 - **Lean 4 Compiler & Mathlib (`leanprover/lean4`, `leanprover-community/mathlib4`):** Licensed under **Apache-2.0**.
-- **This Desktop Wrapper & Offline Engine:** Licensed under the **MIT License** (see [`LICENSE`](file:///d:/LEAN4Game/LICENSE)).
+- **This Desktop Wrapper & Offline Engine:** Licensed under the **GNU General Public License v3.0 (GPL-3.0)** (see [`LICENSE`](file:///d:/LEAN4Game/LICENSE)).
