@@ -6,13 +6,19 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Workaround for WebKitGTK 2.40+ DMA-BUF renderer bug on Linux:
-    // Disabling DMA-BUF renderer prevents blank/white windows on Linux (especially with NVIDIA/Wayland/Mesa).
+    // Workaround for WebKitGTK 2.40+ bugs on Linux:
+    // 1. Disabling DMA-BUF renderer prevents blank/white windows on Linux (especially with NVIDIA/Wayland/Mesa).
+    // 2. Disabling sandbox prevents WebKitWebProcess crashes on Ubuntu 24.04 and systems with AppArmor / restricted namespaces.
     #[cfg(target_os = "linux")]
     {
         if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
             unsafe {
                 std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+            }
+        }
+        if std::env::var_os("WEBKIT_FORCE_SANDBOX").is_none() {
+            unsafe {
+                std::env::set_var("WEBKIT_FORCE_SANDBOX", "0");
             }
         }
     }

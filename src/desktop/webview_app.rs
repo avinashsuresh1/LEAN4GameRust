@@ -65,8 +65,9 @@ impl DesktopApp {
         let injection_script = DesktopPersistenceBridge::generate_injection_script(&saved_state);
         let save_file_clone = save_file.clone();
 
-        // Fix WebKitGTK 2.40+ bug on Linux: DMA-BUF renderer conflicts with graphics drivers/Wayland,
-        // producing a blank/white window. Disabling DMA-BUF forces shared-memory rendering.
+        // Fix WebKitGTK 2.40+ bugs on Linux:
+        // 1. DMA-BUF renderer conflicts with graphics drivers/Wayland.
+        // 2. Bubblewrap sandbox crashes when unprivileged user namespaces are restricted (e.g. Ubuntu 24.04).
         #[cfg(target_os = "linux")]
         {
             if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
@@ -74,10 +75,23 @@ impl DesktopApp {
                     std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
                 }
             }
+            if std::env::var_os("WEBKIT_FORCE_SANDBOX").is_none() {
+                unsafe {
+                    std::env::set_var("WEBKIT_FORCE_SANDBOX", "0");
+                }
+            }
         }
 
         let webview = WebViewBuilder::new()
             .with_url(&resolved_url)
+            .with_devtools(true)
+            .with_on_page_load_handler(|event, url| {
+                let status = match event {
+                    wry::PageLoadEvent::Started => "Started",
+                    wry::PageLoadEvent::Finished => "Finished",
+                };
+                println!("🌐 [Page Load {}] {}", status, url);
+            })
             .with_initialization_script(&injection_script)
             .with_ipc_handler(move |req: wry::http::Request<String>| {
                 let msg = req.body();

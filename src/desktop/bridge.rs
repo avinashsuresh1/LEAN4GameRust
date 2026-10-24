@@ -67,97 +67,88 @@ impl DesktopPersistenceBridge {
     try {{
         console.log("[LEAN4Game Desktop] Initializing local filesystem persistence bridge...");
 
-        function initBridge() {{
-            if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {{
-                return;
+        const savedState = {saved_state_json};
+        if (savedState && typeof savedState === 'object') {{
+            let restoredCount = 0;
+            for (const [k, v] of Object.entries(savedState)) {{
+                try {{
+                    localStorage.setItem(k, v);
+                    restoredCount++;
+                }} catch(e) {{
+                    console.error("[LEAN4Game Desktop] Failed restoring key:", k, e);
+                }}
             }}
+            console.log("[LEAN4Game Desktop] Successfully restored " + restoredCount + " items from local filesystem.");
+        }}
 
-            const savedState = {saved_state_json};
-            if (savedState && typeof savedState === 'object') {{
-                let restoredCount = 0;
-                for (const [k, v] of Object.entries(savedState)) {{
-                    try {{
-                        localStorage.setItem(k, v);
-                        restoredCount++;
-                    }} catch(e) {{
-                        console.error("[LEAN4Game Desktop] Failed restoring key:", k, e);
+        function dumpAllLocalStorage() {{
+            const dump = {{}};
+            try {{
+                for (let i = 0; i < localStorage.length; i++) {{
+                    const key = localStorage.key(i);
+                    if (key) {{
+                        dump[key] = localStorage.getItem(key);
                     }}
                 }}
-                console.log("[LEAN4Game Desktop] Successfully restored " + restoredCount + " items from local filesystem.");
-            }}
+            }} catch(e) {{}}
+            return dump;
+        }}
 
-            function dumpAllLocalStorage() {{
-                const dump = {{}};
+        let debounceTimer = null;
+        function notifyRustSave() {{
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {{
                 try {{
-                    for (let i = 0; i < localStorage.length; i++) {{
-                        const key = localStorage.key(i);
-                        if (key) {{
-                            dump[key] = localStorage.getItem(key);
-                        }}
+                    const dump = dumpAllLocalStorage();
+                    const msg = JSON.stringify({{
+                        type: "save_state",
+                        payload: dump
+                    }});
+                    if (window.ipc && window.ipc.postMessage) {{
+                        window.ipc.postMessage(msg);
                     }}
-                }} catch(e) {{}}
-                return dump;
-            }}
+                }} catch(e) {{
+                    console.error("[LEAN4Game Desktop] Error posting save to Rust:", e);
+                }}
+            }}, 400);
+        }}
 
-            let debounceTimer = null;
-            function notifyRustSave() {{
-                if (debounceTimer) clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {{
-                    try {{
-                        const dump = dumpAllLocalStorage();
-                        const msg = JSON.stringify({{
-                            type: "save_state",
-                            payload: dump
-                        }});
-                        if (window.ipc && window.ipc.postMessage) {{
-                            window.ipc.postMessage(msg);
-                        }}
-                    }} catch(e) {{
-                        console.error("[LEAN4Game Desktop] Error posting save to Rust:", e);
-                    }}
-                }}, 400);
-            }}
-
-            // Proxy localStorage.setItem, removeItem, and clear
+        // Hook Storage.prototype so it works across all WebKit and Safari engines
+        if (typeof Storage !== 'undefined' && Storage.prototype) {{
             try {{
-                const originalSetItem = localStorage.setItem.bind(localStorage);
-                localStorage.setItem = function(key, val) {{
-                    originalSetItem(key, val);
+                const originalSetItem = Storage.prototype.setItem;
+                Storage.prototype.setItem = function(key, val) {{
+                    originalSetItem.call(this, key, val);
                     notifyRustSave();
                 }};
 
-                const originalRemoveItem = localStorage.removeItem.bind(localStorage);
-                localStorage.removeItem = function(key) {{
-                    originalRemoveItem(key);
+                const originalRemoveItem = Storage.prototype.removeItem;
+                Storage.prototype.removeItem = function(key) {{
+                    originalRemoveItem.call(this, key);
                     notifyRustSave();
                 }};
 
-                const originalClear = localStorage.clear.bind(localStorage);
-                localStorage.clear = function() {{
-                    originalClear();
+                const originalClear = Storage.prototype.clear;
+                Storage.prototype.clear = function() {{
+                    originalClear.call(this);
                     notifyRustSave();
                 }};
             }} catch(e) {{
-                console.error("[LEAN4Game Desktop] Failed to hook storage methods:", e);
+                console.error("[LEAN4Game Desktop] Failed to hook Storage.prototype:", e);
             }}
-
-            // Periodic heartbeat flush every 2.5 seconds to guarantee save on proof completion
-            setInterval(notifyRustSave, 2500);
-
-            // Ctrl+S / Cmd+S manual save shortcut
-            window.addEventListener('keydown', (e) => {{
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {{
-                    e.preventDefault();
-                    notifyRustSave();
-                    console.log("[LEAN4Game Desktop] Manual save triggered (Ctrl+S).");
-                }}
-            }});
         }}
 
-        if (document.readyState === 'loading') {{
-            document.addEventListener('DOMContentLoaded', initBridge);
-        }}
-        initBridge();
+        // Periodic heartbeat flush every 2.5 seconds to guarantee save on proof completion
+        setInterval(notifyRustSave, 2500);
+
+        // Ctrl+S / Cmd+S manual save shortcut
+        window.addEventListener('keydown', (e) => {{
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {{
+                e.preventDefault();
+                notifyRustSave();
+                console.log("[LEAN4Game Desktop] Manual save triggered (Ctrl+S).");
+            }}
+        }});
     }} catch(topErr) {{
         console.error("[LEAN4Game Desktop] Persistence script error:", topErr);
     }}
