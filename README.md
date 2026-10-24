@@ -54,9 +54,19 @@ If you are on an airplane, have no internet connection, or cannot reach the HHU 
 
 ## 🚀 Quick Start & Usage
 
-### Prerequisites
-- [Rust toolchain](https://rustup.rs/) (1.75+ or newer)
-- On Windows: WebView2 Runtime (already pre-installed on Windows 10 and 11)
+### 🌐 Cross-Platform Support & Prerequisites
+
+The application is completely cross-platform (**Linux**, **macOS**, and **Windows**):
+
+- **Rust toolchain:** [rustup.rs](https://rustup.rs/) (1.75+ or newer).
+- **Native Webview Engine (per Operating System):**
+  - **Linux:** Uses native WebKitGTK. Install the standard webview development packages:
+    - *Ubuntu / Debian:* `sudo apt install libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev`
+    - *Fedora:* `sudo dnf install webkit2gtk4.1-devel gtk3-devel`
+    - *Arch Linux:* `sudo pacman -S webkit2gtk-4.1 gtk3`
+  - **macOS:** Uses Apple `WKWebView` (built into macOS, zero additional runtime installation needed).
+  - **Windows:** Uses Microsoft Edge WebView2 (pre-installed by default on Windows 10 & 11).
+- **Standalone Offline Engine (`--standalone`):** Does not require any WebView runtime; uses native cross-platform OpenGL/WGPU rendering across all operating systems.
 
 ### 1. Launch the Official Desktop App (with local saves)
 ```bash
