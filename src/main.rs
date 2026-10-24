@@ -7,21 +7,20 @@ use std::path::PathBuf;
 
 fn main() {
     // Cross-platform guarantee for Linux:
-    // WebKitGTK requires WEBKIT_DISABLE_COMPOSITING_MODE=1, WEBKIT_DISABLE_DMABUF_RENDERER=1,
-    // and WEBKIT_FORCE_SANDBOX=0 to be set in the process environment BEFORE the dynamic linker
-    // and GTK/WebKit libraries load. If not already configured, we transparently re-exec the process
-    // with these environment variables so a simple `cargo run` works out of the box on all Linux distros.
+    // WebKitGTK requires environment flags (such as disabling DMA-BUF conflict and sandbox permission issues)
+    // to be set in the process environment BEFORE GTK/WebKit shared libraries load.
+    // If not already configured, we transparently re-exec the process with these environment variables
+    // so a single `cargo run` works out of the box on all Linux distros.
     #[cfg(target_os = "linux")]
     {
         if std::env::var_os("LEAN4GAME_LINUX_ENV_CONFIGURED").is_none() {
             if let Ok(exe) = std::env::current_exe() {
                 let mut cmd = std::process::Command::new(exe);
-                cmd.args(std::env::args().skip(1));
-                cmd.env("LEAN4GAME_LINUX_ENV_CONFIGURED", "1");
-                cmd.env("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-                cmd.env("WEBKIT_FORCE_SANDBOX", "0");
-                cmd.env("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
-                cmd.env("LIBGL_ALWAYS_SOFTWARE", "1");
+                let raw_args: Vec<String> = std::env::args().skip(1).collect();
+                cmd.args(&raw_args);
+                for (k, v) in DesktopApp::linux_env_vars(&raw_args) {
+                    cmd.env(k, v);
+                }
 
                 #[cfg(unix)]
                 {

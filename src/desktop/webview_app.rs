@@ -37,6 +37,23 @@ impl DesktopApp {
         }
     }
 
+    /// Returns the environment variable key-value pairs required for stable WebKitGTK execution on Linux.
+    pub fn linux_env_vars(args: &[String]) -> Vec<(&'static str, &'static str)> {
+        let mut vars = vec![
+            ("LEAN4GAME_LINUX_ENV_CONFIGURED", "1"),
+            ("WEBKIT_DISABLE_DMABUF_RENDERER", "1"),
+            ("WEBKIT_FORCE_SANDBOX", "0"),
+            ("__NV_DISABLE_EXPLICIT_SYNC", "1"),
+        ];
+
+        if args.iter().any(|a| a == "--software-render" || a == "--no-gpu") {
+            vars.push(("WEBKIT_DISABLE_COMPOSITING_MODE", "1"));
+            vars.push(("LIBGL_ALWAYS_SOFTWARE", "1"));
+        }
+
+        vars
+    }
+
     /// Launches the exact official Lean 4 Game client in a native desktop window
     /// with bidirectional local filesystem persistence.
     pub fn launch(target_url: Option<&str>, save_path: Option<PathBuf>) -> Result<(), String> {
@@ -82,7 +99,7 @@ impl DesktopApp {
             }
         }
 
-        let webview = WebViewBuilder::new()
+        let builder = WebViewBuilder::new()
             .with_url(&resolved_url)
             .with_devtools(true)
             .with_on_page_load_handler(|event, url| {
@@ -106,9 +123,34 @@ impl DesktopApp {
                         eprintln!("❌ [Persistence Error]: {}", e);
                     }
                 }
-            })
+            });
+
+        #[cfg(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "android"
+        ))]
+        let webview = builder
             .build(&window)
             .map_err(|e| format!("Failed to initialize webview: {}", e))?;
+
+        #[cfg(not(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "android"
+        )))]
+        let webview = {
+            use tao::platform::unix::WindowExtUnix;
+            use wry::WebViewBuilderExtUnix;
+            let vbox = window
+                .default_vbox()
+                .ok_or_else(|| "Failed to get default vbox from GTK window".to_string())?;
+            builder
+                .build_gtk(vbox)
+                .map_err(|e| format!("Failed to initialize webview on Linux: {}", e))?
+        };
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;

@@ -1,6 +1,6 @@
 # LEAN 4 Game - Desktop Edition (with Save-to-Disk)
 
-[![Tests Passing](https://img.shields.io/badge/tests-31%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
+[![Tests Passing](https://img.shields.io/badge/tests-32%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
 [![Original Game](https://img.shields.io/badge/original%20game-adam.math.hhu.de-blue.svg)](https://adam.math.hhu.de/)
 
 > ### 📢 An Honest Note About What This Project Is
@@ -176,7 +176,7 @@ Any `.json` file in `./games/` is **automatically detected and loaded**:
 
 ## 🧪 Automated Tests
 
-The codebase includes **31 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, and mathematical tactics:
+The codebase includes **32 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, and mathematical tactics:
 
 ```bash
 cargo test
@@ -223,7 +223,7 @@ d:/LEAN4Game/
 │   │   └── terminal_game.rs             # CLI game runner and verification
 │   ├── lib.rs                           # Shared library exports
 │   └── main.rs                          # CLI dispatcher and app launcher
-├── tests/                               # 31 Comprehensive Unit & Integration Tests
+├── tests/                               # 32 Comprehensive Unit & Integration Tests
 │   ├── desktop_persistence_tests.rs
 │   ├── curriculum_tests.rs
 │   ├── engine_tests.rs

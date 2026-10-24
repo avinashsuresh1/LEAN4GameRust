@@ -122,3 +122,28 @@ fn test_bridge_export_and_import() {
     assert_eq!(loaded.get("profile_name").unwrap(), "Student1");
     assert_eq!(loaded.get("solved_count").unwrap(), "46");
 }
+
+#[test]
+fn test_linux_env_vars() {
+    let default_vars = DesktopApp::linux_env_vars(&[]);
+    let var_map: HashMap<&str, &str> = default_vars.into_iter().collect();
+    assert_eq!(var_map.get("LEAN4GAME_LINUX_ENV_CONFIGURED"), Some(&"1"));
+    assert_eq!(var_map.get("WEBKIT_DISABLE_DMABUF_RENDERER"), Some(&"1"));
+    assert_eq!(var_map.get("WEBKIT_FORCE_SANDBOX"), Some(&"0"));
+    assert_eq!(var_map.get("__NV_DISABLE_EXPLICIT_SYNC"), Some(&"1"));
+    assert!(!var_map.contains_key("WEBKIT_DISABLE_COMPOSITING_MODE"));
+    assert!(!var_map.contains_key("LIBGL_ALWAYS_SOFTWARE"));
+
+    // When --software-render is specified
+    let sw_vars = DesktopApp::linux_env_vars(&["--software-render".to_string()]);
+    let sw_map: HashMap<&str, &str> = sw_vars.into_iter().collect();
+    assert_eq!(sw_map.get("WEBKIT_DISABLE_COMPOSITING_MODE"), Some(&"1"));
+    assert_eq!(sw_map.get("LIBGL_ALWAYS_SOFTWARE"), Some(&"1"));
+
+    // When --no-gpu is specified
+    let nogpu_vars = DesktopApp::linux_env_vars(&["--no-gpu".to_string()]);
+    let nogpu_map: HashMap<&str, &str> = nogpu_vars.into_iter().collect();
+    assert_eq!(nogpu_map.get("WEBKIT_DISABLE_COMPOSITING_MODE"), Some(&"1"));
+    assert_eq!(nogpu_map.get("LIBGL_ALWAYS_SOFTWARE"), Some(&"1"));
+}
+
