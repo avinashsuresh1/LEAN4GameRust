@@ -65,7 +65,18 @@ impl DesktopApp {
         let injection_script = DesktopPersistenceBridge::generate_injection_script(&saved_state);
         let save_file_clone = save_file.clone();
 
-        let _webview = WebViewBuilder::new()
+        // Fix WebKitGTK 2.40+ bug on Linux: DMA-BUF renderer conflicts with graphics drivers/Wayland,
+        // producing a blank/white window. Disabling DMA-BUF forces shared-memory rendering.
+        #[cfg(target_os = "linux")]
+        {
+            if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+                unsafe {
+                    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+                }
+            }
+        }
+
+        let webview = WebViewBuilder::new()
             .with_url(&resolved_url)
             .with_initialization_script(&injection_script)
             .with_ipc_handler(move |req: wry::http::Request<String>| {
@@ -87,6 +98,8 @@ impl DesktopApp {
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
+            // Retain webview in closure so it is NOT dropped on GTK/Linux
+            let _ = &webview;
 
             match event {
                 Event::NewEvents(StartCause::Init) => {

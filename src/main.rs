@@ -6,7 +6,25 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    // Workaround for WebKitGTK 2.40+ DMA-BUF renderer bug on Linux:
+    // Disabling DMA-BUF renderer prevents blank/white windows on Linux (especially with NVIDIA/Wayland/Mesa).
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            unsafe {
+                std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+            }
+        }
+    }
+
     let args: Vec<String> = env::args().collect();
+
+    if args.contains(&"--software-render".to_string()) || args.contains(&"--no-gpu".to_string()) {
+        unsafe {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+            std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+        }
+    }
 
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
         println!("=======================================================");
