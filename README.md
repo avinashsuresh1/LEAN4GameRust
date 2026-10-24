@@ -1,7 +1,6 @@
 # LEAN 4 Game - Desktop Edition (with Save-to-Disk)
 
-[![CI Tests](https://github.com/avinashsuresh1/LEAN4GameRust/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/avinashsuresh1/LEAN4GameRust)
-[![Tests Passing](https://img.shields.io/badge/tests-30%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
+[![Tests Passing](https://img.shields.io/badge/tests-31%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
 [![Original Game](https://img.shields.io/badge/original%20game-adam.math.hhu.de-blue.svg)](https://adam.math.hhu.de/)
 
 > ### 📢 An Honest Note About What This Project Is
@@ -107,15 +106,77 @@ cargo run -- --import-web saves/my_progress_backup.json
 
 ### 5. Automated Proof Verification
 ```bash
-# Verify all 46 curriculum levels in the pure Rust prover
+# Verify all curriculum levels in the prover
 cargo run -- --test-all
 ```
 
 ---
 
+## 🎨 Creating & Playing Custom Games
+
+You can create and run custom games in **both modes**:
+
+### 1. In Official Lean 4 Desktop Mode
+Any game repository published on GitHub using the official Lean 4 Game framework can be loaded directly:
+```bash
+# Play any official or community Lean 4 game repository:
+cargo run -- --game <github_username>/<repository_name>
+
+# Or point to a locally hosted game server:
+cargo run -- --game http://localhost:8080/#/g/my-game
+```
+All your handwritten proofs and completed level stars in custom games are automatically captured and saved to `./saves/official_lean4game_save.json`.
+
+### 2. In Standalone Offline Pure Rust Mode
+You can create your own mathematical games with custom worlds, levels, theorems, hypotheses, and hints simply by placing a JSON file into the [`./games/`](file:///d:/LEAN4Game/games/) folder.
+
+See [`games/example_custom_game.json`](file:///d:/LEAN4Game/games/example_custom_game.json) for a complete template:
+
+```json
+{
+  "id": "my_geometry_game",
+  "title": "Geometry Foundations",
+  "description": "Custom axioms and proofs in metric geometry.",
+  "author": "Community Creator",
+  "icon": "📐",
+  "worlds": [
+    {
+      "id": "triangle_world",
+      "name": "Triangle Properties",
+      "description": "Triangle inequalities and congruence.",
+      "icon": "🔺",
+      "levels": [
+        {
+          "id": "level_1",
+          "world_id": "triangle_world",
+          "number": 1,
+          "title": "Metric non-negativity",
+          "theorem_name": "dist_nonneg",
+          "doc": "Prove that distance between distinct points is positive.",
+          "hints": ["Use definition of metric space"],
+          "context_vars": [["x", "ℝ"], ["y", "ℝ"]],
+          "initial_hypotheses": [],
+          "target_str": "x + 0 = x",
+          "available_tactics": ["rw", "rfl"],
+          "reference_solution": "rw [add_zero]"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Any `.json` file in `./games/` is **automatically detected and loaded**:
+- Appears as a dedicated tab in the desktop GUI application
+- Listed in `cargo run -- --list-games`
+- Playable interactively in the terminal via `cargo run -- --cli <world_id> <level_num>`
+- Verified by the automated test suite `cargo run -- --test-all`
+
+---
+
 ## 🧪 Automated Tests
 
-The codebase includes **30 unit and integration tests** verifying URL routing, injection script generation, IPC messaging, atomic disk persistence, and mathematical tactics:
+The codebase includes **31 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, and mathematical tactics:
 
 ```bash
 cargo test

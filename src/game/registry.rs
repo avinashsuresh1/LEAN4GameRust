@@ -1,6 +1,7 @@
 use crate::game::level::Level;
 use crate::game::package::GamePackage;
 use crate::game::world::World;
+use std::path::{Path, PathBuf};
 
 fn s_vec(vals: &[&str]) -> Vec<String> {
     vals.iter().map(|v| v.to_string()).collect()
@@ -13,8 +14,43 @@ fn s_pairs(vals: &[(&str, &str)]) -> Vec<(String, String)> {
 pub struct CurriculumRegistry;
 
 impl CurriculumRegistry {
+    /// Directory for user-created custom games.
+    pub fn custom_games_dir() -> PathBuf {
+        PathBuf::from("games")
+    }
+
+    /// Deserializes a GamePackage from a JSON string.
+    pub fn load_game_from_json(json_str: &str) -> Result<GamePackage, String> {
+        serde_json::from_str(json_str).map_err(|e| format!("Failed to parse game JSON: {}", e))
+    }
+
+    /// Loads a GamePackage from a JSON file.
+    pub fn load_game_from_file(path: &Path) -> Result<GamePackage, String> {
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read game file {:?}: {}", path, e))?;
+        Self::load_game_from_json(&content)
+    }
+
+    /// Scans a directory for *.json files and loads valid custom GamePackages.
+    pub fn load_custom_games_from_dir(dir: &Path) -> Vec<GamePackage> {
+        let mut custom = Vec::new();
+        if dir.exists() && dir.is_dir() {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().and_then(|e| e.to_str()) == Some("json") {
+                        if let Ok(pkg) = Self::load_game_from_file(&path) {
+                            custom.push(pkg);
+                        }
+                    }
+                }
+            }
+        }
+        custom
+    }
+
     pub fn get_games() -> Vec<GamePackage> {
-        vec![
+        let mut games = vec![
             GamePackage {
                 id: "natural_numbers".to_string(),
                 title: "Natural Number Game (NNG4)".to_string(),
@@ -54,7 +90,17 @@ impl CurriculumRegistry {
                     Self::boolean_world(),
                 ],
             },
-        ]
+        ];
+
+        // Automatically merge any custom games found in ./games/
+        let custom = Self::load_custom_games_from_dir(&Self::custom_games_dir());
+        for g in custom {
+            if !games.iter().any(|existing| existing.id == g.id) {
+                games.push(g);
+            }
+        }
+
+        games
     }
 
     pub fn get_game(game_id: &str) -> Option<GamePackage> {

@@ -1,0 +1,54 @@
+{
+  "id": "custom_algebra",
+  "title": "Custom Algebra Game",
+  "description": "An example custom game demonstrating how anyone can define new mathematical worlds and levels in pure JSON.",
+  "author": "Community Creator",
+  "icon": "📐",
+  "worlds": [
+    {
+      "id": "algebra_intro",
+      "name": "Algebraic Identities",
+      "description": "Foundational identities in commutative rings and monoids.",
+      "icon": "✨",
+      "levels": [
+        {
+          "id": "add_zero_ident",
+          "world_id": "algebra_intro",
+          "number": 1,
+          "title": "Right identity of addition",
+          "theorem_name": "add_zero_example",
+          "doc": "Prove that adding zero to any natural number leaves it unchanged.",
+          "hints": [
+            "Use the Peano axiom add_zero: x + 0 = x",
+            "Try rewriting with: rw [add_zero]"
+          ],
+          "context_vars": [
+            ["x", "ℕ"]
+          ],
+          "initial_hypotheses": [],
+          "target_str": "x + 0 = x",
+          "available_tactics": ["rw", "rfl"],
+          "reference_solution": "rw [add_zero]"
+        },
+        {
+          "id": "double_zero_ident",
+          "world_id": "algebra_intro",
+          "number": 2,
+          "title": "Chained zeroes",
+          "theorem_name": "double_zero_example",
+          "doc": "Prove that adding zero twice leaves the number unchanged.",
+          "hints": [
+            "Rewrite with add_zero once for the outer addition, then once more for the inner addition."
+          ],
+          "context_vars": [
+            ["x", "ℕ"]
+          ],
+          "initial_hypotheses": [],
+          "target_str": "(x + 0) + 0 = x",
+          "available_tactics": ["rw", "rfl"],
+          "reference_solution": "rw [add_zero]\nrw [add_zero]"
+        }
+      ]
+    }
+  ]
+}

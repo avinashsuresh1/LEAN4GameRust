@@ -118,7 +118,38 @@ fn test_all_set_theory_levels() {
 
 #[test]
 fn test_curriculum_batch_runner() {
-    // Verifies all 46 levels across all games (Natural Numbers, Real Analysis, Set Theory)
+    // Verifies all levels across built-in games (Natural Numbers, Real Analysis, Set Theory)
     let res = TerminalRunner::test_all_curriculum();
     assert!(res.is_ok(), "Curriculum runner failed: {:?}", res.err());
+}
+
+#[test]
+fn test_custom_game_loading_and_verification() {
+    use std::path::Path;
+
+    // Verify custom game deserialization from file
+    let path = Path::new("games/example_custom_game.json");
+    assert!(path.exists(), "example_custom_game.json should exist");
+
+    let custom_game = CurriculumRegistry::load_game_from_file(path).expect("Valid custom game JSON");
+    assert_eq!(custom_game.id, "custom_algebra");
+    assert_eq!(custom_game.worlds.len(), 1);
+    assert_eq!(custom_game.worlds[0].levels.len(), 2);
+
+    // Verify it automatically appears in CurriculumRegistry::get_games()
+    let all_games = CurriculumRegistry::get_games();
+    let found = all_games.iter().find(|g| g.id == "custom_algebra");
+    assert!(found.is_some(), "Custom game should be automatically registered");
+
+    // Verify solving levels from the custom game
+    let env = Environment::standard_peano();
+    for level in &custom_game.worlds[0].levels {
+        let state = level.build_initial_state();
+        let res = Verifier::verify_script(&state, &level.reference_solution, &env);
+        assert!(
+            res.is_complete,
+            "Custom level '{}' should be solvable: {:?}",
+            level.id, res.first_error
+        );
+    }
 }
