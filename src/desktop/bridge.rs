@@ -1,3 +1,4 @@
+use crate::desktop::security::SecurityPolicy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -40,6 +41,9 @@ impl DesktopPersistenceBridge {
 
     /// Atomically save key-values to disk using a temporary file.
     pub fn save_state_atomic(path: &Path, data: &HashMap<String, String>) -> io::Result<()> {
+        SecurityPolicy::validate_ipc_payload(data)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -159,12 +163,19 @@ impl DesktopPersistenceBridge {
 
     /// Process an IPC message from the WebView2 JavaScript runtime and update disk.
     pub fn handle_ipc_message(json_str: &str, save_path: &Path) -> Result<usize, String> {
+        let base_saves_dir = PathBuf::from("saves");
+        let validated_path = SecurityPolicy::validate_save_path(&base_saves_dir, save_path)
+            .map_err(|e| format!("Security violation: {}", e))?;
+
         let msg: IpcSaveMessage = serde_json::from_str(json_str)
             .map_err(|e| format!("Failed to parse IPC message: {}", e))?;
 
         if msg.msg_type == "save_state" {
+            SecurityPolicy::validate_ipc_payload(&msg.payload)
+                .map_err(|e| format!("Security violation: {}", e))?;
+
             let count = msg.payload.len();
-            Self::save_state_atomic(save_path, &msg.payload)
+            Self::save_state_atomic(&validated_path, &msg.payload)
                 .map_err(|e| format!("Filesystem write error: {}", e))?;
             Ok(count)
         } else {

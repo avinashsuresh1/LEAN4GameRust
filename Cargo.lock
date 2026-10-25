@@ -2390,6 +2390,7 @@ dependencies = [
  "serde_json",
  "tao",
  "tempfile",
+ "url",
  "wry",
 ]
 

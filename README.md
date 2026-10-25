@@ -1,6 +1,6 @@
 # LEAN 4 Game - Desktop Edition (with Save-to-Disk)
 
-[![Tests Passing](https://img.shields.io/badge/tests-32%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
+[![Tests Passing](https://img.shields.io/badge/tests-36%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
 [![Original Game](https://img.shields.io/badge/original%20game-adam.math.hhu.de-blue.svg)](https://adam.math.hhu.de/)
 
 > ### 📢 An Honest Note About What This Project Is
@@ -73,7 +73,19 @@ cargo run
 ```
 Opens the native desktop window connected to the official Lean 4 Game hub with your saves automatically loading from and saving to `./saves/official_lean4game_save.json`.
 
-### 2. Launch a Specific Game Directly
+### 2. Launch Self-Contained Local Lean Server & Desktop App (100% Offline)
+```bash
+cargo run -- --local
+```
+Automatically boots an embedded local Lean server on `http://127.0.0.1:8080/` with interactive proof verification and connects the desktop window to it. **Zero internet connection, zero external network requests, and zero remote dependencies.**
+
+### 3. Run Self-Contained Local Server in Terminal
+```bash
+cargo run -- --serve
+```
+Runs the standalone embedded HTTP server on `127.0.0.1:8080` exposing the interactive Lean 4 web client and JSON endpoints (`/api/games`, `/api/verify`, `/api/health`).
+
+### 4. Launch a Specific Game Directly
 ```bash
 # Natural Number Game (NNG4)
 cargo run -- --game nng
@@ -88,14 +100,14 @@ cargo run -- --game set-theory
 cargo run -- --game AlexanderBentkamp/lean4game-logic
 ```
 
-### 3. Launch Standalone Offline Pure Rust Engine
+### 5. Launch Standalone Offline Pure Rust Engine (egui/eframe GUI)
 ```bash
 cargo run -- --standalone
 # or
 cargo run -- --offline
 ```
 
-### 4. Backup & Restore Save Files
+### 6. Backup & Restore Save Files
 ```bash
 # Export your official game save to a backup JSON file
 cargo run -- --export-web saves/my_progress_backup.json
@@ -104,11 +116,24 @@ cargo run -- --export-web saves/my_progress_backup.json
 cargo run -- --import-web saves/my_progress_backup.json
 ```
 
-### 5. Automated Proof Verification
+### 7. Automated Proof Verification
 ```bash
 # Verify all curriculum levels in the prover
 cargo run -- --test-all
 ```
+
+---
+
+## 🛡️ Security Hardening & Zero-Exploit Architecture
+
+Because desktop WebViews interface with web content and local storage, strict security controls are enforced at the Rust native boundary:
+
+- **Strict Origin & Domain Allowlist (`with_navigation_handler`)**: Web navigation is restricted strictly to official Lean community domains (`adam.math.hhu.de`, `leanprover-community.github.io`) and local loopback (`127.0.0.1`, `localhost`). All untrusted external domains are blocked.
+- **URI Scheme Quarantine**: Dangerous URI schemes (`file:`, `javascript:`, `data:`, `shell:`, `vbscript:`) are blocked from top-level navigation.
+- **Popup & Window Request Blocking (`with_new_window_req_handler`)**: Unauthorized popup windows or external redirects spawned by page scripts are intercepted and denied.
+- **Filesystem Path Traversal Protection**: Save paths are strictly validated against directory traversal attacks (`..` components) and confined to `./saves/`.
+- **IPC Payload Validation & DoS Prevention**: Incoming persistence IPC payloads are sanitized, capping keys at 512 bytes, values at 2 MB, and total payloads at 25 MB with null-byte rejection.
+- **Zero Remote Dependency Mode (`--local`)**: Enables complete isolation from online infrastructure by executing against the built-in local server.
 
 ---
 
@@ -176,13 +201,14 @@ Any `.json` file in `./games/` is **automatically detected and loaded**:
 
 ## 🧪 Automated Tests
 
-The codebase includes **32 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, and mathematical tactics:
+The codebase includes **36 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, mathematical tactics, security origin guards, path traversal prevention, and embedded local server endpoints:
 
 ```bash
 cargo test
 ```
 
-- [`tests/desktop_persistence_tests.rs`](file:///d:/LEAN4Game/tests/desktop_persistence_tests.rs): Tests the JavaScript injection script generation, atomic disk saving and loading, native IPC handling, game URL resolution, and web save export/import.
+- [`tests/security_tests.rs`](file:///d:/LEAN4Game/tests/security_tests.rs): Tests URL allowlist enforcement, dangerous URI scheme rejection, path traversal protection, IPC payload validation, and embedded local server API endpoints.
+- [`tests/desktop_persistence_tests.rs`](file:///d:/LEAN4Game/tests/desktop_persistence_tests.rs): Tests the JavaScript injection script generation, atomic disk saving and loading, native IPC handling, Linux environment resolution, and web save export/import.
 - [`tests/curriculum_tests.rs`](file:///d:/LEAN4Game/tests/curriculum_tests.rs): End-to-end verification of all 46 levels across Natural Numbers, Real Analysis, and Set Theory.
 - [`tests/tactics_tests.rs`](file:///d:/LEAN4Game/tests/tactics_tests.rs): Tests for `rfl`, `rw`, `induction`, `exact`, `intro`, `apply`, and relational symmetry.
 - [`tests/engine_tests.rs`](file:///d:/LEAN4Game/tests/engine_tests.rs): AST manipulation, free variable analysis, expression parsing, and pattern matching.
@@ -200,7 +226,9 @@ d:/LEAN4Game/
 ├── src/
 │   ├── desktop/                         # Official Desktop App & Save-to-Disk Bridge
 │   │   ├── bridge.rs                    # IPC handler, injection script, atomic disk persistence
-│   │   ├── webview_app.rs               # Tao window + Wry WebView2 integration
+│   │   ├── local_server.rs              # Embedded self-contained local server & toolchain detection
+│   │   ├── security.rs                  # Origin allowlist, traversal protection & payload validation
+│   │   ├── webview_app.rs               # Tao window + Wry integration (Wayland/X11 GTK container)
 │   │   └── mod.rs
 │   ├── engine/                          # Offline Pure Rust Theorem Prover (Fallback)
 │   │   ├── expr.rs                      # Mathematical AST (N, R, quantifiers, metrics)
@@ -223,13 +251,14 @@ d:/LEAN4Game/
 │   │   └── terminal_game.rs             # CLI game runner and verification
 │   ├── lib.rs                           # Shared library exports
 │   └── main.rs                          # CLI dispatcher and app launcher
-├── tests/                               # 32 Comprehensive Unit & Integration Tests
+├── tests/                               # 36 Comprehensive Unit & Integration Tests
+│   ├── security_tests.rs
 │   ├── desktop_persistence_tests.rs
 │   ├── curriculum_tests.rs
 │   ├── engine_tests.rs
 │   ├── tactics_tests.rs
 │   └── persistence_tests.rs
-└── Cargo.toml                           # tao, wry, eframe, serde, etc.
+└── Cargo.toml                           # tao, wry, eframe, serde, url, etc.
 ```
 
 ---

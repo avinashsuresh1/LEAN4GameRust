@@ -39,8 +39,10 @@ fn main() {
         println!("=======================================================");
         println!("\nUsage:");
         println!("  cargo run                               Launch Official Lean 4 Game Desktop App (with local saves)");
+        println!("  cargo run -- --local                    Launch Self-Contained Local Lean Server & Desktop App (100% offline)");
         println!("  cargo run -- --game <id_or_url>         Launch specific game (e.g. 'nng', 'real-analysis', 'set-theory')");
         println!("  cargo run -- --standalone              Launch Pure Rust Offline Prover GUI");
+        println!("  cargo run -- --serve                    Run the self-contained local Lean server in terminal");
         println!("  cargo run -- --test-all                 Run automated proof verification on all 46 levels");
         println!("  cargo run -- --list-games               List available mathematical games and worlds");
         println!("  cargo run -- --list-profiles            List player profiles and completion stats");
@@ -51,6 +53,27 @@ fn main() {
         println!("  cargo run -- --import-web <path>        Import official game save from file");
         println!("=======================================================");
         return;
+    }
+
+    if args.contains(&"--serve".to_string()) || args.contains(&"--local-server".to_string()) {
+        println!("=======================================================");
+        println!("  LEAN 4 Game - Self-Contained Local Server");
+        println!("=======================================================");
+        match lean4game::desktop::LocalLeanServer::start_in_background(lean4game::desktop::LocalLeanServer::DEFAULT_PORT) {
+            Ok(port) => {
+                println!("🚀 Server listening on http://127.0.0.1:{}/", port);
+                println!("🌐 Web UI available at: http://127.0.0.1:{}/", port);
+                println!("🔌 API endpoints: /api/games, /api/verify, /api/health");
+                println!("Press Ctrl+C to terminate.");
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(60));
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to start local server: {}", e);
+                std::process::exit(1);
+            }
+        }
     }
 
     if args.contains(&"--list-games".to_string()) || args.contains(&"-l".to_string()) {
@@ -179,13 +202,16 @@ fn main() {
     }
 
     // Default: Official Lean 4 Game Native Desktop Window with Local Filesystem Persistence
-    let target_game = if let Some(pos) = args.iter().position(|a| a == "--game" || a == "-g") {
+    let devtools = args.contains(&"--devtools".to_string());
+    let target_game = if args.contains(&"--local".to_string()) || args.contains(&"--self-contained".to_string()) {
+        Some("local")
+    } else if let Some(pos) = args.iter().position(|a| a == "--game" || a == "-g") {
         args.get(pos + 1).map(|s| s.as_str())
     } else {
         None
     };
 
-    if let Err(err) = DesktopApp::launch(target_game, None) {
+    if let Err(err) = DesktopApp::launch(target_game, None, devtools) {
         eprintln!("Desktop launch error: {}", err);
         println!("Falling back to Pure Rust Standalone Engine...");
         let native_options = eframe::NativeOptions {

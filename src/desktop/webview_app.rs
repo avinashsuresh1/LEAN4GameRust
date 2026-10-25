@@ -1,4 +1,6 @@
 use crate::desktop::bridge::DesktopPersistenceBridge;
+use crate::desktop::local_server::LocalLeanServer;
+use crate::desktop::security::SecurityPolicy;
 use std::path::PathBuf;
 use tao::{
     event::{Event, StartCause, WindowEvent},
@@ -10,7 +12,7 @@ use wry::WebViewBuilder;
 pub struct DesktopApp;
 
 impl DesktopApp {
-    /// Resolves game aliases and identifiers to official Lean 4 Game URLs.
+    /// Resolves game aliases and identifiers to official Lean 4 Game URLs or local server URLs.
     pub fn resolve_game_url(input: &str) -> String {
         let trimmed = input.trim();
         let lower = trimmed.to_lowercase();
@@ -26,6 +28,9 @@ impl DesktopApp {
             }
             "hub" | "home" | "all" | "" => {
                 "https://adam.math.hhu.de/".to_string()
+            }
+            "local" | "local-server" | "offline-web" | "self-contained" => {
+                LocalLeanServer::local_url(LocalLeanServer::DEFAULT_PORT)
             }
             _ => {
                 if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
@@ -54,21 +59,62 @@ impl DesktopApp {
         vars
     }
 
-    /// Launches the exact official Lean 4 Game client in a native desktop window
-    /// with bidirectional local filesystem persistence.
-    pub fn launch(target_url: Option<&str>, save_path: Option<PathBuf>) -> Result<(), String> {
-        let resolved_url = target_url.map(Self::resolve_game_url).unwrap_or_else(|| "https://adam.math.hhu.de/".to_string());
+    /// Launches the Lean 4 Game client in a native desktop window
+    /// with bidirectional local filesystem persistence, origin sandboxing, and optional local server.
+    pub fn launch(
+        target_url: Option<&str>,
+        save_path: Option<PathBuf>,
+        devtools: bool,
+    ) -> Result<(), String> {
+        let is_local_request = target_url
+            .map(|u| {
+                let l = u.trim().to_lowercase();
+                l == "local"
+                    || l == "local-server"
+                    || l == "offline-web"
+                    || l == "self-contained"
+                    || l.starts_with("http://127.0.0.1")
+                    || l.starts_with("http://localhost")
+            })
+            .unwrap_or(false);
+
+        if is_local_request && !LocalLeanServer::is_port_active(LocalLeanServer::DEFAULT_PORT) {
+            println!(
+                "🚀 Launching self-contained local Lean 4 server on 127.0.0.1:{}...",
+                LocalLeanServer::DEFAULT_PORT
+            );
+            let actual_port = LocalLeanServer::start_in_background(LocalLeanServer::DEFAULT_PORT)?;
+            println!(
+                "✅ Self-contained local server is active at http://127.0.0.1:{}/",
+                actual_port
+            );
+        }
+
+        let resolved_url = target_url
+            .map(Self::resolve_game_url)
+            .unwrap_or_else(|| "https://adam.math.hhu.de/".to_string());
+
+        // Validate initial target URL against security policy
+        if !SecurityPolicy::is_url_allowed(&resolved_url) {
+            return Err(format!(
+                "Security rejection: URL '{}' is not in the trusted origin allowlist",
+                resolved_url
+            ));
+        }
+
         let save_file = save_path.unwrap_or_else(DesktopPersistenceBridge::default_save_path);
         println!("=======================================================");
-        println!("  LEAN 4 Game - Official Desktop Edition");
+        println!("  LEAN 4 Game - Desktop Edition (Security Hardened)");
         println!("=======================================================");
-        println!("  🌐 Connecting to official Lean 4 Game engine: {}", resolved_url);
+        println!("  🌐 Connecting to Lean 4 engine: {}", resolved_url);
         println!("  💾 Local persistence file: {:?}", save_file);
+        println!("  🛡️  Origin allowlist: STRICT (only official HHU & local loopback permitted)");
+        println!("  🔒 Path traversal guard: ACTIVE (filesystem writes confined to ./saves/)");
         println!("=======================================================");
 
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
-            .with_title("LEAN 4 Game - Desktop Edition (Official Engine & Local Filesystem Saves)")
+            .with_title("LEAN 4 Game - Desktop Edition (Security Hardened & Local Saves)")
             .with_inner_size(tao::dpi::LogicalSize::new(1350.0, 850.0))
             .build(&event_loop)
             .map_err(|e| format!("Failed to create desktop window: {}", e))?;
@@ -101,7 +147,31 @@ impl DesktopApp {
 
         let builder = WebViewBuilder::new()
             .with_url(&resolved_url)
-            .with_devtools(true)
+            .with_devtools(devtools)
+            // SECURITY: Restrict navigation to approved origins only
+            .with_navigation_handler(|url| {
+                if SecurityPolicy::is_url_allowed(&url) {
+                    true
+                } else {
+                    eprintln!(
+                        "🛑 [Security Guard] Blocked navigation attempt to untrusted URL: {}",
+                        url
+                    );
+                    false
+                }
+            })
+            // SECURITY: Disallow untrusted popup windows
+            .with_new_window_req_handler(|url| {
+                if SecurityPolicy::is_url_allowed(&url) {
+                    true
+                } else {
+                    eprintln!(
+                        "🛑 [Security Guard] Blocked popup window to untrusted URL: {}",
+                        url
+                    );
+                    false
+                }
+            })
             .with_on_page_load_handler(|event, url| {
                 let status = match event {
                     wry::PageLoadEvent::Started => "Started",
