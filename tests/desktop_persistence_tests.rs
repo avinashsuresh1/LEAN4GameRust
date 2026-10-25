@@ -21,6 +21,22 @@ fn test_resolve_game_url() {
         "https://adam.math.hhu.de/#/g/ImperialCollegeLondon/formalising-mathematics-2024"
     );
     assert_eq!(
+        DesktopApp::resolve_game_url("robo"),
+        "https://adam.math.hhu.de/#/g/hhu-adam/Robo"
+    );
+    assert_eq!(
+        DesktopApp::resolve_game_url("logic"),
+        "https://adam.math.hhu.de/#/g/leanprover-community/logic"
+    );
+    assert_eq!(
+        DesktopApp::resolve_game_url("riehl"),
+        "https://adam.math.hhu.de/#/g/emilyriehl/reintroductiontoproofs"
+    );
+    assert_eq!(
+        DesktopApp::resolve_game_url("linear-algebra"),
+        "https://adam.math.hhu.de/#/g/ImperialCollegeLondon/linear-algebra"
+    );
+    assert_eq!(
         DesktopApp::resolve_game_url("hub"),
         "https://adam.math.hhu.de/"
     );

@@ -26,6 +26,18 @@ impl DesktopApp {
             "set-theory" | "set_theory" | "st" | "formalising-mathematics" => {
                 "https://adam.math.hhu.de/#/g/ImperialCollegeLondon/formalising-mathematics-2024".to_string()
             }
+            "robo" | "scribble" | "hhu-adam" => {
+                "https://adam.math.hhu.de/#/g/hhu-adam/Robo".to_string()
+            }
+            "logic" | "intro-to-logic" | "lean-logic" => {
+                "https://adam.math.hhu.de/#/g/leanprover-community/logic".to_string()
+            }
+            "reintroduction-to-proofs" | "riehl" | "proofs" => {
+                "https://adam.math.hhu.de/#/g/emilyriehl/reintroductiontoproofs".to_string()
+            }
+            "linear-algebra" | "linear_algebra" | "la" => {
+                "https://adam.math.hhu.de/#/g/ImperialCollegeLondon/linear-algebra".to_string()
+            }
             "hub" | "home" | "all" | "" => {
                 "https://adam.math.hhu.de/".to_string()
             }

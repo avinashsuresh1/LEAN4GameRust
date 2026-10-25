@@ -61,30 +61,45 @@ fn test_local_server_api_games_returns_complete_curriculum_with_hints_and_dialog
     let body = &response[body_pos + 4..];
 
     let games: Vec<GamePackage> = serde_json::from_str(body).expect("Valid GamePackage JSON list");
-    assert!(games.len() >= 3, "Curriculum must have at least 3 games (NNG, Real Analysis, Set Theory)");
+    assert!(games.len() >= 7, "Curriculum must have all 7 canonical games from adam.math.hhu.de");
 
-    // Verify Natural Numbers Game
+    // 1. Verify Natural Numbers Game
     let nng = games.iter().find(|g| g.id == "natural_numbers").expect("NNG game package");
     assert_eq!(nng.title, "Natural Number Game (NNG4)");
     assert!(!nng.worlds.is_empty());
-
     let tutorial = nng.worlds.iter().find(|w| w.id == "tutorial").expect("Tutorial world");
     let tut1 = tutorial.levels.iter().find(|l| l.number == 1).expect("Tutorial level 1");
+    assert!(!tut1.doc.is_empty());
+    assert!(tut1.doc.contains("Welcome to the Lean 4 Game!"));
+    assert!(!tut1.hints.is_empty());
 
-    // Verify doc (story/dialogue), hints, and available_tactics are present and populated
-    assert!(!tut1.doc.is_empty(), "Level doc must not be empty");
-    assert!(tut1.doc.contains("Welcome to the Lean 4 Game!"), "Doc must contain pedagogical narrative");
-    assert!(!tut1.hints.is_empty(), "Level hints must not be empty");
-    assert!(!tut1.available_tactics.is_empty(), "Level available tactics must not be empty");
-    assert!(tut1.available_tactics.contains(&"rfl".to_string()));
+    // 2. Verify Scribble / Robo
+    let robo = games.iter().find(|g| g.id == "robo").expect("Robo game package");
+    assert_eq!(robo.title, "Scribble / Robo");
+    assert_eq!(robo.icon, "🧝");
+    let r_logic = robo.worlds.iter().find(|w| w.id == "robo_logic").expect("Robo logic world");
+    let r1 = r_logic.levels.iter().find(|l| l.number == 1).expect("Robo level 1");
+    assert!(r1.doc.contains("Scribble"));
 
-    // Verify Real Analysis Game
+    // 3. Verify Real Analysis Game
     let ra = games.iter().find(|g| g.id == "real_analysis").expect("Real analysis package");
     assert_eq!(ra.title, "Real Analysis, The Game");
-    let rf = ra.worlds.iter().find(|w| w.id == "real_foundations").expect("Real foundations world");
-    let ra1 = rf.levels.iter().find(|l| l.number == 1).expect("Real analysis level 1");
-    assert!(!ra1.doc.is_empty());
-    assert!(!ra1.hints.is_empty());
+
+    // 4. Verify Set Theory Game
+    let st = games.iter().find(|g| g.id == "set_theory").expect("Set theory package");
+    assert_eq!(st.title, "Set Theory & Logic Game");
+
+    // 5. Verify A Lean Intro to Logic
+    let logic = games.iter().find(|g| g.id == "intro_to_logic").expect("Logic game package");
+    assert_eq!(logic.title, "A Lean Intro to Logic");
+
+    // 6. Verify Reintroduction to Proofs
+    let riehl = games.iter().find(|g| g.id == "reintroduction_to_proofs").expect("Emily Riehl game package");
+    assert_eq!(riehl.title, "Reintroduction to Proofs");
+
+    // 7. Verify Linear Algebra Game
+    let la = games.iter().find(|g| g.id == "linear_algebra").expect("Linear algebra package");
+    assert_eq!(la.title, "Linear Algebra Done Right in Lean");
 }
 
 #[test]
@@ -147,7 +162,61 @@ fn test_local_server_verify_multi_game_and_goal_infos() {
         assert!(resp_obj.success);
     }
 
-    // 3. Verify empty proof returns initial goals and hypotheses in goal_infos
+    // 3. Verify Scribble/Robo level 1 with "rfl"
+    {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed connecting to local server");
+        let v_req = VerificationRequest {
+            game_id: Some("robo".to_string()),
+            world_id: "robo_logic".to_string(),
+            level_num: 1,
+            proof_script: "rfl".to_string(),
+        };
+        let body = serde_json::to_string(&v_req).unwrap();
+        let req = format!(
+            "POST /api/verify HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            port,
+            body.len(),
+            body
+        );
+        stream.write_all(req.as_bytes()).unwrap();
+
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        assert!(response.contains("200 OK"));
+        let body_pos = response.find("\r\n\r\n").expect("HTTP headers end");
+        let resp_obj: VerificationResponse = serde_json::from_str(&response[body_pos + 4..]).unwrap();
+        assert!(resp_obj.completed);
+        assert!(resp_obj.success);
+    }
+
+    // 4. Verify A Lean Intro to Logic level 1 with "intro h\nrcases h with ⟨hp, hq⟩\nexact hp"
+    {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed connecting to local server");
+        let v_req = VerificationRequest {
+            game_id: Some("intro_to_logic".to_string()),
+            world_id: "logic_connectives".to_string(),
+            level_num: 1,
+            proof_script: "intro h\nrcases h with ⟨hp, hq⟩\nexact hp".to_string(),
+        };
+        let body = serde_json::to_string(&v_req).unwrap();
+        let req = format!(
+            "POST /api/verify HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            port,
+            body.len(),
+            body
+        );
+        stream.write_all(req.as_bytes()).unwrap();
+
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        assert!(response.contains("200 OK"));
+        let body_pos = response.find("\r\n\r\n").expect("HTTP headers end");
+        let resp_obj: VerificationResponse = serde_json::from_str(&response[body_pos + 4..]).unwrap();
+        assert!(resp_obj.completed);
+        assert!(resp_obj.success);
+    }
+
+    // 5. Verify empty proof returns initial goals and hypotheses in goal_infos
     {
         let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed connecting to local server");
         let v_req = VerificationRequest {

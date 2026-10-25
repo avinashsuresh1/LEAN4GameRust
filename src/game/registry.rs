@@ -90,6 +90,10 @@ impl CurriculumRegistry {
                     Self::boolean_world(),
                 ],
             },
+            Self::robo_game(),
+            Self::logic_game(),
+            Self::riehl_game(),
+            Self::linear_algebra_game(),
         ];
 
         // Automatically merge any custom games found in ./games/
@@ -1008,4 +1012,427 @@ impl CurriculumRegistry {
             ],
         }
     }
+
+    fn robo_game() -> GamePackage {
+        GamePackage {
+            id: "robo".to_string(),
+            title: "Scribble / Robo".to_string(),
+            description: "Journey through the Leaniverse guided by Scribble the smart-elf across university-level logic, functions, structures, and order theory.".to_string(),
+            author: "Heinrich Heine University Düsseldorf (ADAM Project)".to_string(),
+            icon: "🧝".to_string(),
+            worlds: vec![
+                Self::robo_logic_world(),
+                Self::robo_functions_world(),
+                Self::robo_structures_world(),
+            ],
+        }
+    }
+
+    fn robo_logic_world() -> World {
+        World {
+            id: "robo_logic".to_string(),
+            name: "Planet of Logic".to_string(),
+            description: "Foundations of mathematical reasoning with Scribble: reflexivity, modus ponens, and syllogisms.".to_string(),
+            icon: "🪐".to_string(),
+            levels: vec![
+                Level {
+                    id: "elf_rfl".to_string(),
+                    world_id: "robo_logic".to_string(),
+                    number: 1,
+                    title: "Level 1: The Elf's Reflexivity".to_string(),
+                    theorem_name: "elf_refl".to_string(),
+                    doc: "Welcome, traveler! I am Scribble, your mathematical guide.\n\nHere on the Planet of Logic, all truths begin with equality. Prove that `x = x` using `rfl`.".to_string(),
+                    hints: s_vec(&["Type `rfl`."]),
+                    context_vars: s_pairs(&[("x", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "x = x".to_string(),
+                    available_tactics: s_vec(&["rfl"]),
+                    reference_solution: "rfl".to_string(),
+                },
+                Level {
+                    id: "elf_mp".to_string(),
+                    world_id: "robo_logic".to_string(),
+                    number: 2,
+                    title: "Level 2: Modus Ponens".to_string(),
+                    theorem_name: "elf_modus_ponens".to_string(),
+                    doc: "Scribble points to a glowing portal: 'If you hold a passage `f : P → Q` and have evidence `P`, you can reach `Q` using `apply f`.'".to_string(),
+                    hints: s_vec(&["`intro f p` then `apply f` then `exact p`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "(P → Q) → P → Q".to_string(),
+                    available_tactics: s_vec(&["intro", "apply", "exact"]),
+                    reference_solution: "intro f p\napply f\nexact p".to_string(),
+                },
+                Level {
+                    id: "elf_syllogism".to_string(),
+                    world_id: "robo_logic".to_string(),
+                    number: 3,
+                    title: "Level 3: Interplanetary Syllogism".to_string(),
+                    theorem_name: "elf_chain".to_string(),
+                    doc: "Scribble charts a route across three star systems: P to Q, and Q to R. Prove that P implies R.".to_string(),
+                    hints: s_vec(&["`intro f g p`, `apply g`, `apply f`, `exact p`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "(P → Q) → (Q → R) → P → R".to_string(),
+                    available_tactics: s_vec(&["intro", "apply", "exact"]),
+                    reference_solution: "intro f g p\napply g\napply f\nexact p".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn robo_functions_world() -> World {
+        World {
+            id: "robo_functions".to_string(),
+            name: "Planet of Functions".to_string(),
+            description: "Study mappings, identity evaluations, and compositions across the universe.".to_string(),
+            icon: "🌌".to_string(),
+            levels: vec![
+                Level {
+                    id: "elf_id_eval".to_string(),
+                    world_id: "robo_functions".to_string(),
+                    number: 1,
+                    title: "Level 1: Identity Evaluation".to_string(),
+                    theorem_name: "elf_id".to_string(),
+                    doc: "Evaluating a function `f x` against itself is reflexive.".to_string(),
+                    hints: s_vec(&["Use `rfl`."]),
+                    context_vars: s_pairs(&[("x", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "f x = f x".to_string(),
+                    available_tactics: s_vec(&["rfl"]),
+                    reference_solution: "rfl".to_string(),
+                },
+                Level {
+                    id: "elf_comp_eval".to_string(),
+                    world_id: "robo_functions".to_string(),
+                    number: 2,
+                    title: "Level 2: Function Composition".to_string(),
+                    theorem_name: "elf_composition".to_string(),
+                    doc: "Chained evaluations `f (g x)` are definitionally equal.".to_string(),
+                    hints: s_vec(&["Use `rfl`."]),
+                    context_vars: s_pairs(&[("x", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "f (g x) = f (g x)".to_string(),
+                    available_tactics: s_vec(&["rfl"]),
+                    reference_solution: "rfl".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn robo_structures_world() -> World {
+        World {
+            id: "robo_structures".to_string(),
+            name: "Planet of Structures".to_string(),
+            description: "Algebraic structures: monoids, groups, and cancellation laws.".to_string(),
+            icon: "🏛️".to_string(),
+            levels: vec![
+                Level {
+                    id: "elf_group_id".to_string(),
+                    world_id: "robo_structures".to_string(),
+                    number: 1,
+                    title: "Level 1: Group Identity Invariance".to_string(),
+                    theorem_name: "elf_id_inv".to_string(),
+                    doc: "Scribble inspects the ancient monolith: adding zero preserves any element.".to_string(),
+                    hints: s_vec(&["Use `rw [add_zero]`."]),
+                    context_vars: s_pairs(&[("x", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "x + 0 = x".to_string(),
+                    available_tactics: s_vec(&["rfl", "rw"]),
+                    reference_solution: "rw [add_zero]".to_string(),
+                },
+                Level {
+                    id: "elf_group_inv".to_string(),
+                    world_id: "robo_structures".to_string(),
+                    number: 2,
+                    title: "Level 2: Group Inverse Cancellation".to_string(),
+                    theorem_name: "elf_inverse_cancel".to_string(),
+                    doc: "In an additive group, subtracting an element from itself yields zero.".to_string(),
+                    hints: s_vec(&["Use `rw [sub_self_real]`."]),
+                    context_vars: s_pairs(&[("x", "ℝ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "x - x = 0".to_string(),
+                    available_tactics: s_vec(&["rfl", "rw"]),
+                    reference_solution: "rw [sub_self_real]".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn logic_game() -> GamePackage {
+        GamePackage {
+            id: "intro_to_logic".to_string(),
+            title: "A Lean Intro to Logic".to_string(),
+            description: "Constructive propositional and predicate logic: conjunctions, disjunctions, implications, and quantifiers.".to_string(),
+            author: "Lean Community".to_string(),
+            icon: "📜".to_string(),
+            worlds: vec![
+                Self::logic_connectives_world(),
+                Self::logic_quantifiers_world(),
+            ],
+        }
+    }
+
+    fn logic_connectives_world() -> World {
+        World {
+            id: "logic_connectives".to_string(),
+            name: "Propositional Connectives".to_string(),
+            description: "Introduction and elimination rules for conjunctions, disjunctions, and implications.".to_string(),
+            icon: "∧".to_string(),
+            levels: vec![
+                Level {
+                    id: "logic_and_elim_l".to_string(),
+                    world_id: "logic_connectives".to_string(),
+                    number: 1,
+                    title: "Level 1: Conjunction Elimination (Left)".to_string(),
+                    theorem_name: "logic_and_l".to_string(),
+                    doc: "In constructive logic, given evidence for `P ∧ Q`, you can extract evidence for `P`.".to_string(),
+                    hints: s_vec(&["`intro h`, `rcases h with ⟨hp, hq⟩`, then `exact hp`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "P ∧ Q → P".to_string(),
+                    available_tactics: s_vec(&["intro", "rcases", "exact"]),
+                    reference_solution: "intro h\nrcases h with ⟨hp, hq⟩\nexact hp".to_string(),
+                },
+                Level {
+                    id: "logic_and_elim_r".to_string(),
+                    world_id: "logic_connectives".to_string(),
+                    number: 2,
+                    title: "Level 2: Conjunction Elimination (Right)".to_string(),
+                    theorem_name: "logic_and_r".to_string(),
+                    doc: "Extract the right-hand proposition `Q` from a conjunction `P ∧ Q`.".to_string(),
+                    hints: s_vec(&["`intro h`, `rcases h with ⟨hp, hq⟩`, then `exact hq`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "P ∧ Q → Q".to_string(),
+                    available_tactics: s_vec(&["intro", "rcases", "exact"]),
+                    reference_solution: "intro h\nrcases h with ⟨hp, hq⟩\nexact hq".to_string(),
+                },
+                Level {
+                    id: "logic_and_symm".to_string(),
+                    world_id: "logic_connectives".to_string(),
+                    number: 3,
+                    title: "Level 3: Conjunction Symmetry".to_string(),
+                    theorem_name: "logic_and_comm".to_string(),
+                    doc: "Conjunction is commutative: `P ∧ Q → Q ∧ P`.".to_string(),
+                    hints: s_vec(&["`intro h`, `rcases h with ⟨hp, hq⟩`, `constructor`, `exact hq`, `exact hp`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "P ∧ Q → Q ∧ P".to_string(),
+                    available_tactics: s_vec(&["intro", "rcases", "constructor", "exact"]),
+                    reference_solution: "intro h\nrcases h with ⟨hp, hq⟩\nconstructor\n· exact hq\n· exact hp".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn logic_quantifiers_world() -> World {
+        World {
+            id: "logic_quantifiers".to_string(),
+            name: "Quantifiers & Predicates".to_string(),
+            description: "Universal quantifiers (∀) and existential quantifiers (∃).".to_string(),
+            icon: "∀".to_string(),
+            levels: vec![
+                Level {
+                    id: "logic_forall_spec".to_string(),
+                    world_id: "logic_quantifiers".to_string(),
+                    number: 1,
+                    title: "Level 1: Universal Specialization".to_string(),
+                    theorem_name: "logic_forall_inst".to_string(),
+                    doc: "If `P` holds universally for all natural numbers `∀ (x : ℕ), P x`, it holds for `0`.".to_string(),
+                    hints: s_vec(&["`intro h`, then `apply h`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "(∀ (x : ℕ), P x) → P 0".to_string(),
+                    available_tactics: s_vec(&["intro", "apply"]),
+                    reference_solution: "intro h\napply h".to_string(),
+                },
+                Level {
+                    id: "logic_exists_inst".to_string(),
+                    world_id: "logic_quantifiers".to_string(),
+                    number: 2,
+                    title: "Level 2: Existential Instantiation".to_string(),
+                    theorem_name: "logic_exists_refl".to_string(),
+                    doc: "Given an existential hypothesis `∃ (x : ℕ), P x`, unpack the witness and re-instantiate it.".to_string(),
+                    hints: s_vec(&["`intro h`, `rcases h with ⟨c, hc⟩`, `use c`, `exact hc`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "(∃ (x : ℕ), P x) → ∃ (x : ℕ), P x".to_string(),
+                    available_tactics: s_vec(&["intro", "rcases", "use", "exact"]),
+                    reference_solution: "intro h\nrcases h with ⟨c, hc⟩\nuse c\nexact hc".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn riehl_game() -> GamePackage {
+        GamePackage {
+            id: "reintroduction_to_proofs".to_string(),
+            title: "Reintroduction to Proofs".to_string(),
+            description: "Prof. Emily Riehl's curriculum introducing mathematical proof writing in dependent type theory.".to_string(),
+            author: "Prof. Emily Riehl (Johns Hopkins University)".to_string(),
+            icon: "🏛️".to_string(),
+            worlds: vec![
+                Self::riehl_identity_world(),
+                Self::riehl_currying_world(),
+            ],
+        }
+    }
+
+    fn riehl_identity_world() -> World {
+        World {
+            id: "riehl_identity".to_string(),
+            name: "Types, Terms & Identity".to_string(),
+            description: "Identity types, path induction, and reflexivity in type theory.".to_string(),
+            icon: "≡".to_string(),
+            levels: vec![
+                Level {
+                    id: "riehl_refl_level".to_string(),
+                    world_id: "riehl_identity".to_string(),
+                    number: 1,
+                    title: "Level 1: Identity of Terms".to_string(),
+                    theorem_name: "riehl_refl".to_string(),
+                    doc: "In dependent type theory, identical terms are related by reflexivity.".to_string(),
+                    hints: s_vec(&["Type `rfl`."]),
+                    context_vars: s_pairs(&[("x", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "x = x".to_string(),
+                    available_tactics: s_vec(&["rfl"]),
+                    reference_solution: "rfl".to_string(),
+                },
+                Level {
+                    id: "riehl_symm_level".to_string(),
+                    world_id: "riehl_identity".to_string(),
+                    number: 2,
+                    title: "Level 2: Inversion of Equality".to_string(),
+                    theorem_name: "riehl_symm".to_string(),
+                    doc: "If `x = y`, we can invert the path to prove `y = x` using `rw [h]`.".to_string(),
+                    hints: s_vec(&["`intro h`, then `rw [h]`."]),
+                    context_vars: s_pairs(&[("x", "ℕ"), ("y", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "x = y → y = x".to_string(),
+                    available_tactics: s_vec(&["intro", "rw"]),
+                    reference_solution: "intro h\nrw [h]".to_string(),
+                },
+                Level {
+                    id: "riehl_trans_level".to_string(),
+                    world_id: "riehl_identity".to_string(),
+                    number: 3,
+                    title: "Level 3: Transitivity of Identity Paths".to_string(),
+                    theorem_name: "riehl_trans".to_string(),
+                    doc: "Connecting two equality paths `x = y` and `y = z` produces `x = z`.".to_string(),
+                    hints: s_vec(&["`intro h1 h2`, then `rw [h1, h2]`."]),
+                    context_vars: s_pairs(&[("x", "ℕ"), ("y", "ℕ"), ("z", "ℕ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "x = y → y = z → x = z".to_string(),
+                    available_tactics: s_vec(&["intro", "rw"]),
+                    reference_solution: "intro h1 h2\nrw [h1, h2]".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn riehl_currying_world() -> World {
+        World {
+            id: "riehl_currying".to_string(),
+            name: "Functions and Dependent Types".to_string(),
+            description: "Function spaces, evaluation, and implications.".to_string(),
+            icon: "λ".to_string(),
+            levels: vec![
+                Level {
+                    id: "riehl_eval_level".to_string(),
+                    world_id: "riehl_currying".to_string(),
+                    number: 1,
+                    title: "Level 1: Function Evaluation".to_string(),
+                    theorem_name: "riehl_eval".to_string(),
+                    doc: "A function `f : A → B` produces an element of `B` when supplied with an element `a : A`.".to_string(),
+                    hints: s_vec(&["`intro f a`, `apply f`, `exact a`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "(A → B) → A → B".to_string(),
+                    available_tactics: s_vec(&["intro", "apply", "exact"]),
+                    reference_solution: "intro f a\napply f\nexact a".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn linear_algebra_game() -> GamePackage {
+        GamePackage {
+            id: "linear_algebra".to_string(),
+            title: "Linear Algebra Done Right in Lean".to_string(),
+            description: "Vector spaces, linear maps, and inner product spaces inspired by Sheldon Axler's classic curriculum.".to_string(),
+            author: "Imperial College London & Lean Community".to_string(),
+            icon: "📐".to_string(),
+            worlds: vec![
+                Self::vec_spaces_world(),
+                Self::inner_products_world(),
+            ],
+        }
+    }
+
+    fn vec_spaces_world() -> World {
+        World {
+            id: "vec_spaces".to_string(),
+            name: "Vector Space Axioms".to_string(),
+            description: "Vector addition, zero identity, and scalar properties.".to_string(),
+            icon: "↗️".to_string(),
+            levels: vec![
+                Level {
+                    id: "vec_zero_id".to_string(),
+                    world_id: "vec_spaces".to_string(),
+                    number: 1,
+                    title: "Level 1: Vector Zero Identity".to_string(),
+                    theorem_name: "vec_zero".to_string(),
+                    doc: "In any vector space, adding the zero vector leaves a vector unchanged: `v + 0 = v`.".to_string(),
+                    hints: s_vec(&["Use `rw [add_zero_real]`."]),
+                    context_vars: s_pairs(&[("v", "ℝ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "v + 0 = v".to_string(),
+                    available_tactics: s_vec(&["rfl", "rw"]),
+                    reference_solution: "rw [add_zero_real]".to_string(),
+                },
+                Level {
+                    id: "vec_sub_zero".to_string(),
+                    world_id: "vec_spaces".to_string(),
+                    number: 2,
+                    title: "Level 2: Vector Subtraction Invariance".to_string(),
+                    theorem_name: "vec_sub_self".to_string(),
+                    doc: "Subtracting a vector from itself produces the zero vector: `v - v = 0`.".to_string(),
+                    hints: s_vec(&["Use `rw [sub_self_real]`."]),
+                    context_vars: s_pairs(&[("v", "ℝ")]),
+                    initial_hypotheses: vec![],
+                    target_str: "v - v = 0".to_string(),
+                    available_tactics: s_vec(&["rfl", "rw"]),
+                    reference_solution: "rw [sub_self_real]".to_string(),
+                },
+            ],
+        }
+    }
+
+    fn inner_products_world() -> World {
+        World {
+            id: "inner_products".to_string(),
+            name: "Inner Product Spaces".to_string(),
+            description: "Norms, distances, and zero vector properties.".to_string(),
+            icon: "📏".to_string(),
+            levels: vec![
+                Level {
+                    id: "vec_zero_norm".to_string(),
+                    world_id: "inner_products".to_string(),
+                    number: 1,
+                    title: "Level 1: Zero Vector Distance".to_string(),
+                    theorem_name: "zero_norm".to_string(),
+                    doc: "The norm or metric distance of the zero element in an inner product space is zero: `|0| = 0`.".to_string(),
+                    hints: s_vec(&["Use `rw [abs_zero]`."]),
+                    context_vars: vec![],
+                    initial_hypotheses: vec![],
+                    target_str: "|0| = 0".to_string(),
+                    available_tactics: s_vec(&["rfl", "rw"]),
+                    reference_solution: "rw [abs_zero]".to_string(),
+                },
+            ],
+        }
+    }
 }
+
