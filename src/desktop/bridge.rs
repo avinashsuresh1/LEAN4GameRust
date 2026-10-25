@@ -72,6 +72,12 @@ impl DesktopPersistenceBridge {
         console.log("[LEAN4Game Desktop] Initializing local filesystem persistence bridge...");
 
         const savedState = {saved_state_json};
+        try {{
+            localStorage.clear();
+        }} catch(e) {{
+            console.error("[LEAN4Game Desktop] Failed clearing localStorage:", e);
+        }}
+
         if (savedState && typeof savedState === 'object') {{
             let restoredCount = 0;
             for (const [k, v] of Object.entries(savedState)) {{

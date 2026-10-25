@@ -59,6 +59,7 @@ fn test_bridge_injection_script_generation() {
     let script = DesktopPersistenceBridge::generate_injection_script(&state);
 
     // Verify key components of the script
+    assert!(script.contains("localStorage.clear()"));
     assert!(script.contains("localStorage.setItem(k, v)"));
     assert!(script.contains("window.ipc.postMessage"));
     assert!(script.contains("dumpAllLocalStorage"));

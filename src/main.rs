@@ -51,6 +51,7 @@ fn main() {
         println!("  cargo run -- --import <path>            Import profile JSON from file");
         println!("  cargo run -- --export-web <path>        Export official game save to file");
         println!("  cargo run -- --import-web <path>        Import official game save from file");
+        println!("  cargo run -- --reset                    Reset all game progress back to scratch");
         println!("=======================================================");
         return;
     }
@@ -177,6 +178,20 @@ fn main() {
             eprintln!("Usage: lean4game --import-web <source_json_path>");
             std::process::exit(1);
         }
+    }
+
+    if args.contains(&"--reset".to_string()) || args.contains(&"--reset-web".to_string()) {
+        let default_save = DesktopPersistenceBridge::default_save_path();
+        let reset_state: std::collections::HashMap<String, String> = [
+            ("game_progress".to_string(), "{\"games\":{}}".to_string()),
+        ].into_iter().collect();
+        if let Err(e) = DesktopPersistenceBridge::save_state_atomic(&default_save, &reset_state) {
+            eprintln!("Failed to reset save file: {}", e);
+            std::process::exit(1);
+        }
+        println!("🗑️  Reset official game save at {:?}", default_save);
+        println!("✅ Game progress has been reset. On next launch, all stars and proofs will start from scratch.");
+        return;
     }
 
     // Pure Rust Offline Mode (via --standalone or --offline)

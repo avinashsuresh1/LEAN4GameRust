@@ -173,19 +173,35 @@ impl LocalLeanServer {
         }
 
         select.game-dropdown {
-            background-color: var(--bg-surface);
-            color: var(--text-primary);
-            border: 1px solid var(--border-light);
+            background-color: #181825;
+            color: #ffffff;
+            border: 1.5px solid #89b4fa;
             border-radius: 6px;
-            padding: 6px 12px;
+            padding: 6px 30px 6px 12px;
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2389b4fa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+            transition: all 0.15s ease;
         }
 
-        select.game-dropdown:hover {
-            border-color: var(--blue);
+        select.game-dropdown:hover, select.game-dropdown:focus {
+            border-color: #b4befe;
+            box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.35);
+        }
+
+        select.game-dropdown option {
+            background-color: #181825;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 8px 12px;
         }
 
         .breadcrumb {
@@ -221,6 +237,17 @@ impl LocalLeanServer {
             background-color: var(--bg-overlay);
             border-color: var(--blue);
             color: #fff;
+        }
+
+        .nav-btn.btn-danger {
+            color: #f38ba8;
+            border-color: rgba(243, 139, 168, 0.4);
+        }
+
+        .nav-btn.btn-danger:hover:not(:disabled) {
+            background-color: rgba(243, 139, 168, 0.15);
+            border-color: #f38ba8;
+            color: #ffffff;
         }
 
         .nav-btn:disabled {
@@ -920,7 +947,8 @@ impl LocalLeanServer {
                 <span>⭐</span>
                 <span id="solved-count">0</span> / <span id="total-count">0</span>
             </div>
-            <button class="nav-btn" onclick="resetProofCode()">↺ Reset</button>
+            <button class="nav-btn" onclick="resetProofCode()" title="Reset current level editor">↺ Reset Code</button>
+            <button class="nav-btn btn-danger" onclick="resetAllProgress()" title="Reset all games progress and start from scratch">🗑️ Reset Progress</button>
             <span class="offline-tag">🟢 100% Offline</span>
         </div>
     </header>
@@ -1353,6 +1381,17 @@ impl LocalLeanServer {
             updateLineNumbers();
             updateGhostText();
             verifyProof();
+        }
+
+        function resetAllProgress() {
+            if (confirm("Reset all game progress and start from scratch?\n\nThis will clear all solved stars, level unlocks, and saved proofs across all games.")) {
+                try {
+                    localStorage.clear();
+                } catch(e) {
+                    console.error("Failed to clear localStorage:", e);
+                }
+                location.reload();
+            }
         }
 
         function renderLevelTacticsChips(tactics) {

@@ -353,3 +353,20 @@ fn test_local_server_handles_empty_post_body_gracefully() {
     assert!(resp_obj.message.contains("Empty verification request"));
 }
 
+#[test]
+fn test_game_selection_dropdown_contrast_and_reset_progress() {
+    let html = LocalLeanServer::embedded_html_client();
+
+    // Verify high-contrast dropdown styles
+    assert!(html.contains("select.game-dropdown {"), "Must have select.game-dropdown CSS");
+    assert!(html.contains("color: #ffffff;"), "Dropdown must use pure white high-contrast text");
+    assert!(html.contains("select.game-dropdown option {"), "Must style dropdown option elements for contrast");
+    assert!(html.contains("border: 1.5px solid #89b4fa;"), "Dropdown must have high-visibility border");
+
+    // Verify reset progress functionality
+    assert!(html.contains("resetAllProgress()"), "Must have Reset Progress button in header");
+    assert!(html.contains("function resetAllProgress()"), "Must define resetAllProgress function");
+    assert!(html.contains("localStorage.clear();"), "resetAllProgress must clear localStorage");
+}
+
+
