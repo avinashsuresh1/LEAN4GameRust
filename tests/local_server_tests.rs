@@ -367,6 +367,36 @@ fn test_game_selection_dropdown_contrast_and_reset_progress() {
     assert!(html.contains("resetAllProgress()"), "Must have Reset Progress button in header");
     assert!(html.contains("function resetAllProgress()"), "Must define resetAllProgress function");
     assert!(html.contains("localStorage.clear();"), "resetAllProgress must clear localStorage");
+    assert!(html.contains("sessionStorage.removeItem(\"__lean4game_hydrated__\");"), "resetAllProgress must clear session hydration marker");
+}
+
+#[test]
+fn test_embedded_html_contains_draft_autosave_listeners() {
+    let html = LocalLeanServer::embedded_html_client();
+
+    // Verify proof draft autosave function
+    assert!(html.contains("function saveCurrentProofDraft()"), "Must define saveCurrentProofDraft function");
+    assert!(html.contains("lean4game_proof_"), "saveCurrentProofDraft must use level-specific proof keys");
+
+    // Verify draft is saved before level transition
+    assert!(
+        html.contains("function loadLevel(gameId, worldId, levelNum) {\n            saveCurrentProofDraft();"),
+        "loadLevel must invoke saveCurrentProofDraft before changing active level"
+    );
+
+    // Verify debounced input autosave on editor
+    assert!(html.contains("draftDebounceTimer = setTimeout(saveCurrentProofDraft, 250);"), "Editor input must auto-save proof draft with debounce");
+
+    // Verify window unload and pagehide lifecycle auto-save
+    assert!(html.contains("window.addEventListener(\"beforeunload\", saveCurrentProofDraft);"), "Must register beforeunload autosave handler");
+    assert!(html.contains("window.addEventListener(\"pagehide\", saveCurrentProofDraft);"), "Must register pagehide autosave handler");
+
+    // Verify snippet and solution insertion auto-save
+    assert!(html.contains("insertSnippet(text) {\n            const editor"), "insertSnippet must be defined");
+    assert!(html.contains("saveCurrentProofDraft();\n        }\n\n        function updateGhostText()"), "insertSnippet must auto-save after snippet insertion");
+
+    // Verify resetProofCode removes draft from localStorage
+    assert!(html.contains("localStorage.removeItem(saveKey);"), "resetProofCode must clear the draft from localStorage");
 }
 
 

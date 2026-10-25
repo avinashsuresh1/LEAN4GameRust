@@ -97,10 +97,23 @@ impl SecurityPolicy {
             }
         }
 
-        let combined = if requested_path.is_relative() {
-            base_dir.join(requested_path)
+        // Strip leading CurDir (.) components if any
+        let mut norm_requested = requested_path;
+        while let Ok(stripped) = norm_requested.strip_prefix(".") {
+            norm_requested = stripped;
+        }
+
+        let mut norm_base = base_dir;
+        while let Ok(stripped) = norm_base.strip_prefix(".") {
+            norm_base = stripped;
+        }
+
+        let combined = if norm_requested.starts_with(norm_base) {
+            norm_requested.to_path_buf()
+        } else if norm_requested.is_relative() {
+            norm_base.join(norm_requested)
         } else {
-            requested_path.to_path_buf()
+            norm_requested.to_path_buf()
         };
 
         for component in combined.components() {

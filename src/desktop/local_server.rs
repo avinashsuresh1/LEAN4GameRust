@@ -1218,7 +1218,19 @@ impl LocalLeanServer {
             return world ? world.levels.find(l => l.number === currentLevelNum) : null;
         }
 
+        function saveCurrentProofDraft() {
+            if (currentGameId && currentWorldId && currentLevelNum) {
+                const ed = document.getElementById("code-editor");
+                if (ed) {
+                    const saveKey = "lean4game_proof_" + currentGameId + "_" + currentWorldId + "_" + currentLevelNum;
+                    localStorage.setItem(saveKey, ed.value);
+                }
+            }
+        }
+
         function loadLevel(gameId, worldId, levelNum) {
+            saveCurrentProofDraft();
+
             currentGameId = gameId;
             currentWorldId = worldId;
             currentLevelNum = levelNum;
@@ -1368,6 +1380,7 @@ impl LocalLeanServer {
             const level = getCurrentLevel();
             if (level && level.reference_solution) {
                 document.getElementById("code-editor").value = level.reference_solution;
+                saveCurrentProofDraft();
                 updateLineNumbers();
                 updateGhostText();
                 verifyProof();
@@ -1378,6 +1391,10 @@ impl LocalLeanServer {
             const level = getCurrentLevel();
             if (!level) return;
             document.getElementById("code-editor").value = "";
+            const saveKey = "lean4game_proof_" + currentGameId + "_" + currentWorldId + "_" + currentLevelNum;
+            try {
+                localStorage.removeItem(saveKey);
+            } catch(e) {}
             updateLineNumbers();
             updateGhostText();
             verifyProof();
@@ -1387,6 +1404,7 @@ impl LocalLeanServer {
             if (confirm("Reset all game progress and start from scratch?\n\nThis will clear all solved stars, level unlocks, and saved proofs across all games.")) {
                 try {
                     localStorage.clear();
+                    sessionStorage.removeItem("__lean4game_hydrated__");
                 } catch(e) {
                     console.error("Failed to clear localStorage:", e);
                 }
@@ -1540,6 +1558,7 @@ impl LocalLeanServer {
             editor.focus();
             updateLineNumbers();
             updateGhostText();
+            saveCurrentProofDraft();
         }
 
         function updateGhostText() {
@@ -1664,11 +1683,14 @@ impl LocalLeanServer {
             }
         }
 
-        // Editor Event Handlers
+        // Editor Event Handlers & Auto-Save
+        let draftDebounceTimer = null;
         const editor = document.getElementById("code-editor");
         editor.addEventListener("input", function() {
             updateLineNumbers();
             updateGhostText();
+            if (draftDebounceTimer) clearTimeout(draftDebounceTimer);
+            draftDebounceTimer = setTimeout(saveCurrentProofDraft, 250);
         });
         editor.addEventListener("scroll", function() {
             document.getElementById("line-numbers").scrollTop = this.scrollTop;
@@ -1682,9 +1704,16 @@ impl LocalLeanServer {
                 insertSnippet("  ");
             } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
+                saveCurrentProofDraft();
                 verifyProof();
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+                e.preventDefault();
+                saveCurrentProofDraft();
             }
         });
+
+        window.addEventListener("beforeunload", saveCurrentProofDraft);
+        window.addEventListener("pagehide", saveCurrentProofDraft);
 
         window.onload = init;
     </script>

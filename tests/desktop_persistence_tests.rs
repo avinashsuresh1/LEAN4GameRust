@@ -66,6 +66,14 @@ fn test_bridge_injection_script_generation() {
     assert!(script.contains("nng4_completed"));
     assert!(script.contains("active_proof"));
     assert!(script.contains("save_state"));
+
+    // Verify session hydration protection and immediate flush handlers
+    assert!(script.contains("__lean4game_hydrated__"), "Must check __lean4game_hydrated__ in sessionStorage");
+    assert!(script.contains("sessionStorage.getItem"), "Must use sessionStorage to prevent re-hydration wipes");
+    assert!(script.contains("flushRustSaveImmediate"), "Must include flushRustSaveImmediate function");
+    assert!(script.contains("beforeunload"), "Must hook beforeunload event for immediate save");
+    assert!(script.contains("pagehide"), "Must hook pagehide event for immediate save");
+    assert!(script.contains("this === localStorage"), "Must only trigger autosave on localStorage modifications");
 }
 
 #[test]
@@ -181,5 +189,34 @@ fn test_reset_json_template_and_import() {
 
     let imported_state = DesktopPersistenceBridge::load_saved_state(&dest_save);
     assert_eq!(imported_state.get("game_progress").unwrap(), "{\"games\":{}}");
+}
+
+#[test]
+fn test_bridge_ipc_message_handling_with_relative_saves_path() {
+    let test_save_rel = std::path::Path::new("saves/test_ipc_relative_save.json");
+
+    let ipc_json = r#"{
+        "type": "save_state",
+        "payload": {
+            "game_id": "natural_numbers",
+            "proof_script": "rfl",
+            "solved": "true"
+        }
+    }"#;
+
+    let res = DesktopPersistenceBridge::handle_ipc_message(ipc_json, test_save_rel);
+    assert_eq!(res, Ok(3));
+
+    // Verify it was written to saves/test_ipc_relative_save.json and NOT saves/saves/test_ipc_relative_save.json
+    assert!(test_save_rel.exists(), "Target file must exist at saves/test_ipc_relative_save.json");
+    let duplicate_path = std::path::Path::new("saves/saves/test_ipc_relative_save.json");
+    assert!(!duplicate_path.exists(), "Must not write to duplicated saves/saves/ path");
+
+    let loaded = DesktopPersistenceBridge::load_saved_state(test_save_rel);
+    assert_eq!(loaded.get("proof_script").unwrap(), "rfl");
+    assert_eq!(loaded.get("solved").unwrap(), "true");
+
+    // Clean up test file
+    let _ = std::fs::remove_file(test_save_rel);
 }
 

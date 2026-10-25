@@ -38,11 +38,28 @@ fn test_security_path_traversal_protection() {
     // 1. Safe paths inside base directory
     let safe_relative = Path::new("my_save.json");
     let res = SecurityPolicy::validate_save_path(&base, safe_relative);
-    assert!(res.is_ok());
+    assert_eq!(res, Ok(PathBuf::from("saves/my_save.json")));
 
     let safe_sub = Path::new("subfolder/save1.json");
     let res_sub = SecurityPolicy::validate_save_path(&base, safe_sub);
-    assert!(res_sub.is_ok());
+    assert_eq!(res_sub, Ok(PathBuf::from("saves/subfolder/save1.json")));
+
+    // 1b. Paths that already include the base directory must NOT duplicate the base prefix (e.g. saves/saves/...)
+    let already_prefixed = Path::new("saves/official_lean4game_save.json");
+    let res_prefixed = SecurityPolicy::validate_save_path(&base, already_prefixed);
+    assert_eq!(
+        res_prefixed,
+        Ok(PathBuf::from("saves/official_lean4game_save.json")),
+        "Must not duplicate base directory into saves/saves/..."
+    );
+
+    let curdir_prefixed = Path::new("./saves/official_lean4game_save.json");
+    let res_curdir = SecurityPolicy::validate_save_path(&base, curdir_prefixed);
+    assert_eq!(
+        res_curdir,
+        Ok(PathBuf::from("saves/official_lean4game_save.json")),
+        "Must strip leading ./ and not duplicate base directory"
+    );
 
     // 2. Blocked path traversal attempts
     let traversal_1 = Path::new("../escaped.json");
