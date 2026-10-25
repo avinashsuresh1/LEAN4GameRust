@@ -8,6 +8,8 @@
 > This project is **not** an attempt to rewrite the real Lean 4 compiler or replace the official platform. 
 > 
 > It is an **exact desktop wrapper** for the official [Lean 4 Game platform (`leanprover-community/lean4game`)](https://github.com/leanprover-community/lean4game) hosted at [adam.math.hhu.de](https://adam.math.hhu.de/). It renders the **exact original game client, Monaco code editor, Infoview, and official Lean 4 / Mathlib backend**, but adds **native desktop support with automatic save-to-disk on your local filesystem**.
+>
+> It was built with Gemini 3.8 Flash model in Google Antigravity
 
 ---
 
