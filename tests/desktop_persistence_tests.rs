@@ -163,3 +163,22 @@ fn test_linux_env_vars() {
     assert_eq!(nogpu_map.get("LIBGL_ALWAYS_SOFTWARE"), Some(&"1"));
 }
 
+#[test]
+fn test_reset_json_template_and_import() {
+    let reset_path = std::path::Path::new("reset.json");
+    assert!(reset_path.exists(), "reset.json must exist in the repository root");
+
+    let state = DesktopPersistenceBridge::load_saved_state(reset_path);
+    assert!(state.contains_key("game_progress"), "reset.json must contain game_progress key");
+    assert_eq!(state.get("game_progress").unwrap(), "{\"games\":{}}");
+
+    // Verify it can be imported cleanly to a save destination
+    let dir = tempdir().unwrap();
+    let dest_save = dir.path().join("official_lean4game_save.json");
+    let count = DesktopPersistenceBridge::import_state(reset_path, &dest_save).unwrap();
+    assert_eq!(count, 1);
+
+    let imported_state = DesktopPersistenceBridge::load_saved_state(&dest_save);
+    assert_eq!(imported_state.get("game_progress").unwrap(), "{\"games\":{}}");
+}
+

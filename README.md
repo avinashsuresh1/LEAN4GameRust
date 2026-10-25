@@ -1,6 +1,6 @@
 # LEAN 4 Game - Desktop Edition (with Save-to-Disk)
 
-[![Tests Passing](https://img.shields.io/badge/tests-36%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
+[![Tests Passing](https://img.shields.io/badge/tests-40%20passed-brightgreen.svg)](https://github.com/avinashsuresh1/LEAN4GameRust)
 [![Original Game](https://img.shields.io/badge/original%20game-adam.math.hhu.de-blue.svg)](https://adam.math.hhu.de/)
 
 > ### 📢 An Honest Note About What This Project Is
@@ -107,14 +107,34 @@ cargo run -- --standalone
 cargo run -- --offline
 ```
 
-### 6. Backup & Restore Save Files
-```bash
-# Export your official game save to a backup JSON file
-cargo run -- --export-web saves/my_progress_backup.json
+### 6. Backup, Restore, and Reset Save Files
 
-# Import a save file from a backup
-cargo run -- --import-web saves/my_progress_backup.json
+Although your game progress and solved stars are **automatically saved continuously to disk** in `./saves/official_lean4game_save.json`, you can easily create standalone file backups to store in cloud storage, commit to version control, or move to another machine.
+
+#### A. Creating a Backup (Export)
+When you want to take a snapshot of your progress (or before sharing your device):
+1. Close the game window (to ensure all in-memory proofs are fully flushed to disk).
+2. Run the export command:
+   ```bash
+   cargo run -- --export-web my_progress_backup.json
+   ```
+   *This extracts your complete proof state, theorem inventory, and solved stars into `my_progress_backup.json`.*
+
+#### B. Restoring Progress (Import)
+To restore an earlier backup file:
+```bash
+cargo run -- --import-web my_progress_backup.json
 ```
+On the next launch, the desktop bridge reads this file and automatically re-hydrates the game with your restored progress.
+
+#### C. Resetting Progress from Scratch (`reset.json`)
+If you have completed all the games and want to experience the challenge completely fresh from Level 1, this repository includes [`reset.json`](file:///d:/LEAN4Game/reset.json).
+
+`reset.json` is a dedicated empty save state containing `{"game_progress": "{\"games\":{}}"}`. You can reset all game progress back to scratch in one command by importing it:
+```bash
+cargo run -- --import-web reset.json
+```
+On next launch, the bridge actively overwrites the webview cache with the empty game structure, clearing all solved stars, level unlocks, and draft proof scripts so you can start from scratch!
 
 ### 7. Automated Proof Verification
 ```bash
@@ -201,7 +221,7 @@ Any `.json` file in `./games/` is **automatically detected and loaded**:
 
 ## 🧪 Automated Tests
 
-The codebase includes **36 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, mathematical tactics, security origin guards, path traversal prevention, and embedded local server endpoints:
+The codebase includes **40 unit and integration tests** verifying URL routing, custom game loading, injection script generation, IPC messaging, atomic disk persistence, mathematical tactics, security origin guards, path traversal prevention, and embedded local server endpoints:
 
 ```bash
 cargo test
