@@ -561,6 +561,13 @@ impl LocalLeanServer {
             white-space: pre-line;
         }
 
+        .code-input-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            overflow: hidden;
+        }
+
         .code-textarea {
             flex: 1;
             padding: 14px;
@@ -576,6 +583,22 @@ impl LocalLeanServer {
             overflow-wrap: normal;
             overflow-x: auto;
             tab-size: 2;
+        }
+
+        .ghost-suggestion {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            pointer-events: none;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            opacity: 0.55;
+            font-style: italic;
+            white-space: pre;
+            user-select: none;
+            display: none;
         }
 
         .editor-bottom {
@@ -1016,7 +1039,10 @@ impl LocalLeanServer {
             </div>
             <div class="editor-workspace">
                 <div id="line-numbers" class="line-numbers">1</div>
-                <textarea id="code-editor" class="code-textarea" spellcheck="false" placeholder="-- Enter proof tactics here (e.g. rfl, rw [add_zero])..."></textarea>
+                <div class="code-input-wrapper">
+                    <textarea id="code-editor" class="code-textarea" spellcheck="false"></textarea>
+                    <div id="ghost-suggestion" class="ghost-suggestion"></div>
+                </div>
             </div>
             <div class="editor-bottom">
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -1223,12 +1249,13 @@ impl LocalLeanServer {
             // Update Progress Pill
             updateProgressPill();
 
-            // Load proof script from localStorage or initial template
+            // Load proof script from localStorage or empty for ghost suggestion
             const saveKey = "lean4game_proof_" + gameId + "_" + worldId + "_" + levelNum;
             const saved = localStorage.getItem(saveKey);
-            const starter = saved !== null ? saved : "-- Write your proof tactics here\n";
+            const starter = saved !== null ? saved : "";
             document.getElementById("code-editor").value = starter;
             updateLineNumbers();
+            updateGhostText();
 
             // Reset solved status badge
             const isSolved = localStorage.getItem("lean4game_solved_" + gameId + "_" + worldId + "_" + levelNum) === "true";
@@ -1314,6 +1341,7 @@ impl LocalLeanServer {
             if (level && level.reference_solution) {
                 document.getElementById("code-editor").value = level.reference_solution;
                 updateLineNumbers();
+                updateGhostText();
                 verifyProof();
             }
         }
@@ -1321,8 +1349,9 @@ impl LocalLeanServer {
         function resetProofCode() {
             const level = getCurrentLevel();
             if (!level) return;
-            document.getElementById("code-editor").value = "-- Write your proof tactics here\n";
+            document.getElementById("code-editor").value = "";
             updateLineNumbers();
+            updateGhostText();
             verifyProof();
         }
 
@@ -1471,6 +1500,23 @@ impl LocalLeanServer {
             editor.selectionStart = editor.selectionEnd = start + text.length;
             editor.focus();
             updateLineNumbers();
+            updateGhostText();
+        }
+
+        function updateGhostText() {
+            const editor = document.getElementById("code-editor");
+            const ghost = document.getElementById("ghost-suggestion");
+            if (!ghost || !editor) return;
+            if (!editor.value || editor.value.trim() === "") {
+                const level = getCurrentLevel();
+                const tactic = (level && level.available_tactics && level.available_tactics.length > 0)
+                    ? level.available_tactics[0]
+                    : "rfl";
+                ghost.innerText = "-- Start typing your proof (e.g. " + tactic + ")...";
+                ghost.style.display = "block";
+            } else {
+                ghost.style.display = "none";
+            }
         }
 
         function updateLineNumbers() {
@@ -1494,7 +1540,15 @@ impl LocalLeanServer {
             return '<span class="hyp-name">' + escapeHtml(name) + '</span> : <span class="hyp-type">' + escapeHtml(type) + '</span>';
         }
 
+        let activeVerifyController = null;
+
         async function verifyProof() {
+            if (activeVerifyController) {
+                try { activeVerifyController.abort(); } catch (_) {}
+            }
+            activeVerifyController = new AbortController();
+            const signal = activeVerifyController.signal;
+
             const proofScript = document.getElementById("code-editor").value;
             const saveKey = "lean4game_proof_" + currentGameId + "_" + currentWorldId + "_" + currentLevelNum;
             localStorage.setItem(saveKey, proofScript);
@@ -1508,7 +1562,8 @@ impl LocalLeanServer {
                         world_id: currentWorldId,
                         level_num: currentLevelNum,
                         proof_script: proofScript
-                    })
+                    }),
+                    signal: signal
                 });
                 const data = await res.json();
 
@@ -1565,15 +1620,21 @@ impl LocalLeanServer {
 
                 document.getElementById("infoview-messages").innerText = data.message;
             } catch (e) {
+                if (e.name === "AbortError") return;
                 document.getElementById("infoview-messages").innerText = "Verification error: " + e;
             }
         }
 
         // Editor Event Handlers
         const editor = document.getElementById("code-editor");
-        editor.addEventListener("input", updateLineNumbers);
+        editor.addEventListener("input", function() {
+            updateLineNumbers();
+            updateGhostText();
+        });
         editor.addEventListener("scroll", function() {
             document.getElementById("line-numbers").scrollTop = this.scrollTop;
+            const ghost = document.getElementById("ghost-suggestion");
+            if (ghost) ghost.scrollTop = this.scrollTop;
         });
 
         editor.addEventListener("keydown", function(e) {
@@ -1592,27 +1653,82 @@ impl LocalLeanServer {
 </html>"####
     }
 
-    /// Handles an incoming HTTP request.
-    fn handle_connection(mut stream: TcpStream) {
-        let mut buffer = [0u8; 16384];
-        let bytes_read = match stream.read(&mut buffer) {
-            Ok(n) if n > 0 => n,
-            _ => return,
-        };
+    /// Reads an entire HTTP request from a TcpStream, respecting Content-Length if present.
+    fn read_http_request(stream: &mut TcpStream) -> Result<(String, String, String), ()> {
+        stream.set_read_timeout(Some(Duration::from_secs(5))).ok();
+        let mut buffer = Vec::new();
+        let mut temp_buf = [0u8; 4096];
+        let header_end;
 
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
-        let mut lines = request.lines();
-        let first_line = lines.next().unwrap_or("");
-        let parts: Vec<&str> = first_line.split_whitespace().collect();
+        // 1. Read until headers are fully received (\r\n\r\n or \n\n)
+        loop {
+            let n = match stream.read(&mut temp_buf) {
+                Ok(n) if n > 0 => n,
+                _ => return Err(()),
+            };
+            buffer.extend_from_slice(&temp_buf[..n]);
 
-        if parts.len() < 2 {
-            return;
+            if let Some(pos) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
+                header_end = (pos, 4);
+                break;
+            } else if let Some(pos) = buffer.windows(2).position(|w| w == b"\n\n") {
+                header_end = (pos, 2);
+                break;
+            }
+
+            // Cap header size to 64KB for security
+            if buffer.len() > 65536 {
+                return Err(());
+            }
         }
 
-        let method = parts[0];
-        let path = parts[1];
+        let header_bytes = &buffer[..header_end.0];
+        let headers_str = String::from_utf8_lossy(header_bytes);
+        let mut lines = headers_str.lines();
+        let request_line = lines.next().unwrap_or("").to_string();
+        let parts: Vec<&str> = request_line.split_whitespace().collect();
+        if parts.len() < 2 {
+            return Err(());
+        }
+        let method = parts[0].to_string();
+        let path = parts[1].to_string();
 
-        match (method, path) {
+        // Parse Content-Length header
+        let mut content_length: usize = 0;
+        for line in lines {
+            let lower = line.to_ascii_lowercase();
+            if lower.starts_with("content-length:") {
+                if let Some(val_str) = line.split(':').nth(1) {
+                    content_length = val_str.trim().parse().unwrap_or(0);
+                }
+            }
+        }
+
+        // 2. Read the body until content_length bytes are received
+        let body_start = header_end.0 + header_end.1;
+        let mut body_bytes = buffer[body_start..].to_vec();
+
+        while body_bytes.len() < content_length {
+            let to_read = (content_length - body_bytes.len()).min(temp_buf.len());
+            let n = match stream.read(&mut temp_buf[..to_read]) {
+                Ok(n) if n > 0 => n,
+                _ => break, // EOF reached
+            };
+            body_bytes.extend_from_slice(&temp_buf[..n]);
+        }
+
+        let body = String::from_utf8_lossy(&body_bytes).to_string();
+        Ok((method, path, body))
+    }
+
+    /// Handles an incoming HTTP request.
+    fn handle_connection(mut stream: TcpStream) {
+        let (method, path, body) = match Self::read_http_request(&mut stream) {
+            Ok(req) => req,
+            Err(_) => return,
+        };
+
+        match (method.as_str(), path.as_str()) {
             ("GET", "/") | ("GET", "/index.html") => {
                 let html = Self::embedded_html_client();
                 let response = format!(
@@ -1652,20 +1768,21 @@ impl LocalLeanServer {
                 let _ = stream.write_all(response.as_bytes());
             }
             ("POST", "/api/verify") => {
-                let body = if let Some(pos) = request.find("\r\n\r\n") {
-                    &request[pos + 4..]
-                } else if let Some(pos) = request.find("\n\n") {
-                    &request[pos + 2..]
+                let resp_obj = if body.trim().is_empty() {
+                    VerificationResponse {
+                        success: false,
+                        completed: false,
+                        message: "Empty verification request received.".to_string(),
+                        goals: vec![],
+                        goal_infos: vec![],
+                    }
                 } else {
-                    ""
-                };
-
-                let resp_obj = match serde_json::from_str::<VerificationRequest>(body) {
-                    Ok(req) => {
-                        let games = CurriculumRegistry::get_games();
-                        let mut target_game_id = req.game_id.clone();
-                        let mut target_level = None;
-                        let mut target_world_id = req.world_id.clone();
+                    match serde_json::from_str::<VerificationRequest>(&body) {
+                        Ok(req) => {
+                            let games = CurriculumRegistry::get_games();
+                            let mut target_game_id = req.game_id.clone();
+                            let mut target_level = None;
+                            let mut target_world_id = req.world_id.clone();
 
                         // Search across games to find matching game and level
                         for g in &games {
@@ -1791,7 +1908,8 @@ impl LocalLeanServer {
                         goals: vec![],
                         goal_infos: vec![],
                     },
-                };
+                }
+            };
 
                 let json = serde_json::to_string(&resp_obj).unwrap_or_else(|_| "{}".to_string());
                 let response = format!(

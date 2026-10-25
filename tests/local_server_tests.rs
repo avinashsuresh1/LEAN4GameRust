@@ -261,3 +261,95 @@ fn test_local_server_api_worlds_endpoint() {
     assert!(response.contains("tutorial"));
     assert!(response.contains("addition"));
 }
+
+#[test]
+fn test_embedded_html_contains_ghost_text_and_no_placeholder() {
+    let html = LocalLeanServer::embedded_html_client();
+
+    // Verify ghost suggestion overlay element is present
+    assert!(html.contains("id=\"ghost-suggestion\""), "Must contain ghost suggestion element");
+    assert!(html.contains("class=\"ghost-suggestion\""), "Must have ghost suggestion CSS class");
+
+    // Verify textarea exists without hardcoded placeholder attribute
+    assert!(html.contains("id=\"code-editor\""), "Must contain code editor textarea");
+    assert!(
+        !html.contains("id=\"code-editor\" class=\"code-textarea\" spellcheck=\"false\" placeholder="),
+        "Code editor textarea must not use hardcoded placeholder"
+    );
+
+    // Verify dynamic ghost text update function and input listener
+    assert!(html.contains("function updateGhostText()"), "Must define updateGhostText function");
+    assert!(html.contains("updateGhostText();"), "Must invoke updateGhostText on editor modifications");
+    assert!(html.contains("activeVerifyController"), "Must utilize AbortController to cancel stale in-flight requests");
+}
+
+#[test]
+fn test_local_server_handles_chunked_and_split_post_body() {
+    let port = LocalLeanServer::start_in_background(0).expect("Failed to start local server on free port");
+    assert!(port > 0);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed connecting to local server");
+    let v_req = VerificationRequest {
+        game_id: Some("natural_numbers".to_string()),
+        world_id: "tutorial".to_string(),
+        level_num: 1,
+        proof_script: "rfl".to_string(),
+    };
+    let body = serde_json::to_string(&v_req).unwrap();
+    let headers = format!(
+        "POST /api/verify HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        port,
+        body.len()
+    );
+
+    // 1. Send headers first in a separate TCP segment
+    stream.write_all(headers.as_bytes()).unwrap();
+    stream.flush().unwrap();
+
+    // 2. Simulate network delay/fragmentation where body arrives later
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    // 3. Send body in subsequent segment
+    stream.write_all(body.as_bytes()).unwrap();
+    stream.flush().unwrap();
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+
+    assert!(response.contains("200 OK"), "Response must be 200 OK");
+    assert!(
+        !response.contains("Malformed request body: EOF while parsing a value"),
+        "Must not fail with EOF while parsing body when split across TCP packets: {}",
+        response
+    );
+
+    let body_pos = response.find("\r\n\r\n").expect("HTTP headers end");
+    let resp_obj: VerificationResponse = serde_json::from_str(&response[body_pos + 4..]).unwrap();
+    assert!(resp_obj.completed, "Level 1 with rfl must complete successfully");
+    assert!(resp_obj.success);
+}
+
+#[test]
+fn test_local_server_handles_empty_post_body_gracefully() {
+    let port = LocalLeanServer::start_in_background(0).expect("Failed to start local server on free port");
+    assert!(port > 0);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed connecting to local server");
+    let req = format!(
+        "POST /api/verify HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        port
+    );
+    stream.write_all(req.as_bytes()).unwrap();
+    stream.flush().unwrap();
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+
+    assert!(response.contains("200 OK"));
+    let body_pos = response.find("\r\n\r\n").expect("HTTP headers end");
+    let resp_obj: VerificationResponse = serde_json::from_str(&response[body_pos + 4..]).unwrap();
+    assert!(!resp_obj.completed);
+    assert!(!resp_obj.success);
+    assert!(resp_obj.message.contains("Empty verification request"));
+}
+
