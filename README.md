@@ -36,7 +36,7 @@ When you play the Lean 4 Game on `adam.math.hhu.de` in a normal web browser:
 2. Whenever you **clear your browser cookies**, wipe site data, run system cleaners, or switch between browsers/devices, **all your hard-earned progress and mathematical proofs are completely wiped out**.
 
 ### How This Desktop App Fixes It:
-This app wraps the official game inside a native window (`tao`) using Edge WebView2 (`wry`) and establishes a **bidirectional Rust persistence bridge**:
+This app wraps the official game inside a native window (`tao`) and establishes a **bidirectional Rust persistence bridge**:
 - **Automatic Hydration on Launch:** On startup, it reads `./saves/official_lean4game_save.json` from your local hard drive and injects your proofs and solved states directly into the browser storage before the page even renders.
 - **Continuous Local Disk Sync:** Whenever you type code or complete a level, the app intercepts `localStorage.setItem` and immediately sends an IPC message to the Rust backend, which saves it atomically to disk (`./saves/official_lean4game_save.json`).
 - **Crash-Resistant Atomic Writes:** Writes to a temporary `.tmp` file first and uses atomic file renaming, ensuring your saves can never be corrupted.
